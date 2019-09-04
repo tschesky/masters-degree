@@ -44,7 +44,7 @@ treeInsert (Node val left right) x
     | x < val   = (Node val (treeInsert left x) right) 
     | otherwise = (Node val left (treeInsert right x))
 
-morseMap = Map.fromList[("a", ".-"),
+morseMap = Map.fromList[("a", ".-"),  
                         ("b", "-..."),
                         ("c", "-.-."),
                         ("d", "-.."),
@@ -118,6 +118,16 @@ decodeMorse (x:y:xs)
     | otherwise = (decodeMorse [x]) ++ (decodeMorse ([y]++xs)) ++ (decodeMorse ([x]++[y]) ++ decodeMorse xs)
     where decoded = decodeCharacter ([x] ++ [y] ++ xs)
 
+decodeMorse' :: String -> String -> [String]
+decodeMorse' x []
+    | Maybe.isJust decoded = [Maybe.fromJust decoded]
+    | otherwise = [""]
+    where decoded = decodeCharacter (x)
+decodeMorse' str (x:xs) 
+    | Maybe.isJust decoded = (([ a++b | a<- [Maybe.fromJust decoded], b <- (decodeMorse' [x] xs) ])) ++ (decodeMorse' (str++[x]) xs)
+    | otherwise = decodeMorse' (str++[x]) xs
+    where decoded = decodeCharacter str
+
 main :: IO ()
 main = do print $ addNats (Succ (Succ Zero)) (Succ (Succ Zero))
           print $ addNats (Succ (Succ (Succ Zero))) (Succ (Succ (Succ Zero)))
@@ -130,8 +140,9 @@ main = do print $ addNats (Succ (Succ Zero)) (Succ (Succ Zero))
           print $ encodeMorse "doodoo"
           print $ encodeMorse' "doodoo"
           print $ decodeCharacter "------"
-          print $ decodeMorse "------.--...."
-
+          print $ decodeCharacter "..."
+          print $ decodeMorse ".--...-.-."
+          print $ decodeMorse' "" ".-..-"
 -- 1 Succ Zero
 -- 2 Succ (Succ Zero)
 -- 3 Succ (Succ (Succ Zero))
