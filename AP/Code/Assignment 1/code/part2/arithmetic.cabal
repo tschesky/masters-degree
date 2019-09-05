@@ -1,0 +1,38 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 195ec641a22e856763ffa03be6fc754ec380e08679175e3d64821c737b4c9ca4
+
+name:           arithmetic
+version:        0.0.0
+build-type:     Simple
+
+library
+  exposed-modules:
+      Arithmetic
+      Definitions
+  other-modules:
+      Paths_arithmetic
+  hs-source-dirs:
+      src
+  build-depends:
+      base
+    , containers
+  default-language: Haskell2010
+
+test-suite my-test-suite
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  other-modules:
+      Paths_arithmetic
+  hs-source-dirs:
+      tests
+  build-depends:
+      arithmetic
+    , base
+    , containers
+    , tasty
+  default-language: Haskell2010

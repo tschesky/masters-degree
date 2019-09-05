@@ -20,10 +20,12 @@ data Nat = Zero | Succ Nat
 
 addNats :: Nat -> Nat -> Nat
 addNats Zero nat = nat
+addNats nat Zero = nat
 addNats (Succ nat) nat2 = addNats nat (Succ nat2)
 
 multiplyNats :: Nat -> Nat -> Nat
 multiplyNats Zero nat = Zero
+multiplyNats nat Zero = Zero
 multiplyNats (Succ nat) nat2 = addNats nat2 (multiplyNats nat nat2)
 
 nat2int :: Nat -> Int
@@ -42,7 +44,9 @@ treeInsert :: Tree -> Int -> Tree
 treeInsert Leaf x = Node x Leaf Leaf
 treeInsert (Node val left right) x
     | x < val   = (Node val (treeInsert left x) right) 
-    | otherwise = (Node val left (treeInsert right x))
+    | x > val   = (Node val left (treeInsert right x))
+    | otherwise = (Node val left right)
+
 
 morseMap = Map.fromList[("a", ".-"),  
                         ("b", "-..."),
@@ -110,6 +114,9 @@ decodeCharacter s
 decodeMorse :: String -> [String]
 decodeMorse [] = [""]
 decodeMorse [x]
+-- decodeMorse [x] = case of decoded
+--     (Just val) -> [val]
+--     Nothing -> [""]
     | Maybe.isJust decoded = [Maybe.fromJust decoded]
     | otherwise = [""]
     where decoded = decodeCharacter ([x])
@@ -141,7 +148,7 @@ main = do print $ addNats (Succ (Succ Zero)) (Succ (Succ Zero))
           print $ encodeMorse' "doodoo"
           print $ decodeCharacter "------"
           print $ decodeCharacter "..."
-          print $ decodeMorse ".--...-.-."
+          --print $ decodeMorse ".--...-.-."
           print $ decodeMorse' "" ".-..-"
 -- 1 Succ Zero
 -- 2 Succ (Succ Zero)

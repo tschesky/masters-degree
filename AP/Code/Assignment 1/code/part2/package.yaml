@@ -1,0 +1,29 @@
+name: arithmetic
+
+# The packages we (may) depend on
+dependencies:
+  - base             # For built-in functions like `length`
+  - containers       # For Data.Map, etc., if needed
+  # For assignment 0, don't add anything else here
+
+# The Arithmetic library
+library:
+  source-dirs: src
+  exposed-modules:
+    - Arithmetic
+    - Definitions
+
+# No stand-alone executable to build
+#executable:
+#  main: Main.hs
+#  source-dirs: src
+
+# Sample test suite
+tests:
+  my-test-suite:
+    main: Test.hs
+    source-dirs: tests
+    dependencies:
+      - arithmetic
+      - tasty     # The Test.Tasty framework, if you want to use it
+      # You may add other LTS-14.1 packages here, if really appropriate

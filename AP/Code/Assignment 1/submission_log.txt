@@ -1,0 +1,250 @@
+
+
+
+Checking files...
+You have a code/part1/src/Warmup.hs. Good.
+You have a code/part2/src/Arithmetic.hs. Good.
+You have a code/part2/src/Definitions.hs. Good.
+Warning:
+  Please do not include .stack-work.
+
+
+
+Building part 1
+OK
+
+
+Building part 2
+OK
+
+
+
+Running some dynamic tests for Part 1...
+Warning:
+  Some tests for Part 1 failed, please comment on this in your report
+
+
+Running some dynamic tests for Part 2...
+Arithmetic Tests
+  showExp tests
+    Mul (Add (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Add (Mul (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Pow (Div (Cst 2) (Cst 3)) (Sub (Cst 4) (Cst 5)):                               OK
+    Add (Sub (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Sub (Cst 2) (Add (Cst 3) (Cst 4)):                                             OK
+    Div (Mul (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Mul (Cst 2) (Div (Cst 3) (Cst 4)):                                             OK
+    Pow (Cst 2) (Pow (Cst 3) (Cst 4)):                                             OK
+    Pow (Pow (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Cst 0:                                                                         OK
+    Cst 3:                                                                         OK
+    Cst (-3):                                                                      OK
+    Add (Cst (-3)) (Cst (-4)):                                                     OK
+    Mul (Cst (-3)) (Cst (-4)):                                                     OK
+    Pow (Cst (-3)) (Cst (-4)):                                                     OK
+  evalSimple tests
+    Cst 3:                                                                         OK
+    Cst 12345678901234567890:                                                      OK
+    Add (Cst 3) (Cst 5):                                                           OK
+    Sub (Cst 3) (Cst 5):                                                           OK
+    Mul (Cst 3) (Cst 5):                                                           OK
+    Mul (Cst 1234567890) (Cst 1234567890):                                         OK
+    Div (Cst 12) (Cst 3):                                                          OK
+    Div (Cst (-12)) (Cst 3):                                                       OK
+    Div (Cst 10) (Cst 3):                                                          OK
+    Div (Cst 0) (Cst 1):                                                           OK
+    Div (Cst (-10)) (Cst 3):                                                       OK
+    Div (Cst 10) (Cst (-3)):                                                       OK
+    Div (Cst (-10)) (Cst (-3)):                                                    OK
+    Pow (Cst 3) (Cst 5):                                                           OK
+    Pow (Cst (-3)) (Cst 5):                                                        OK
+    Pow (Cst (-3)) (Cst 0):                                                        OK
+    Pow (Cst 0) (Cst 0):                                                           OK
+    Pow (Cst 0) (Cst 1):                                                           OK
+    *Div (Cst 4) (Cst 0):                                                          OK
+    *Pow (Div (Cst 4) (Cst 0)) (Cst 0):                                            FAIL
+      onlinetatests/Tests.hs:270:
+      expected: <failure>
+       but got: 1
+    *Add (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Add (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Mul (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Mul (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Div (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Div (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Pow (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Pow (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Pow (Cst 4) (Cst (-1)):                                                       OK
+    Mul (Add (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Pow (Cst 2) (Mul (Cst 3) (Cst 4)):                                             OK
+    *Mul (Cst 0) (Div (Cst 0) (Cst 0)):                                            OK
+    *Pow (Pow (Cst 2) (Cst (-1))) (Cst 0):                                         FAIL
+      onlinetatests/Tests.hs:270:
+      expected: <failure>
+       but got: 1
+  extendEnv tests
+    (extendEnv "x" 5 initEnv) "x":                                                 OK
+    (extendEnv "x" 5 initEnv) "y":                                                 OK
+    (extendEnv "x" 5 (extendEnv "y" 6 initEnv)) "x":                               OK
+    (extendEnv "x" 5 (extendEnv "y" 6 initEnv)) "y":                               OK
+    (extendEnv "x" 5 (extendEnv "y" 6 initEnv)) "z":                               OK
+    (extendEnv "x" 5 (extendEnv "x" 6 initEnv)) "x":                               OK
+  evalFull tests with [x := 5, y := 6]
+    Cst 3:                                                                         OK
+    Cst 12345678901234567890:                                                      OK
+    Add (Cst 3) (Cst 5):                                                           OK
+    Sub (Cst 3) (Cst 5):                                                           OK
+    Mul (Cst 3) (Cst 5):                                                           OK
+    Mul (Cst 1234567890) (Cst 1234567890):                                         OK
+    Div (Cst 12) (Cst 3):                                                          OK
+    Div (Cst (-12)) (Cst 3):                                                       OK
+    Div (Cst 10) (Cst 3):                                                          OK
+    Div (Cst 0) (Cst 1):                                                           OK
+    Div (Cst (-10)) (Cst 3):                                                       OK
+    Div (Cst 10) (Cst (-3)):                                                       OK
+    Div (Cst (-10)) (Cst (-3)):                                                    OK
+    Pow (Cst 3) (Cst 5):                                                           OK
+    Pow (Cst (-3)) (Cst 5):                                                        OK
+    Pow (Cst (-3)) (Cst 0):                                                        OK
+    Pow (Cst 0) (Cst 0):                                                           OK
+    Pow (Cst 0) (Cst 1):                                                           OK
+    *Div (Cst 4) (Cst 0):                                                          OK
+    *Pow (Div (Cst 4) (Cst 0)) (Cst 0):                                            FAIL
+      onlinetatests/Tests.hs:270:
+      expected: <failure>
+       but got: 1
+    *Add (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Add (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Mul (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Mul (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Div (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Div (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Pow (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Pow (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Pow (Cst 4) (Cst (-1)):                                                       OK
+    Mul (Add (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Pow (Cst 2) (Mul (Cst 3) (Cst 4)):                                             OK
+    *Mul (Cst 0) (Div (Cst 0) (Cst 0)):                                            OK
+    *Pow (Pow (Cst 2) (Cst (-1))) (Cst 0):                                         FAIL
+      onlinetatests/Tests.hs:270:
+      expected: <failure>
+       but got: 1
+    If (Cst 1) (Cst 4) (Cst 5):                                                    OK
+    If (Cst (-3)) (Cst 4) (Cst 5):                                                 OK
+    If (Sub (Cst 3) (Cst 3)) (Cst 4) (Cst 5):                                      OK
+    If (Cst 2) (Cst 5) (Div (Cst 7) (Cst 0)):                                      OK
+    If (Cst 0) (Div (Cst 7) (Cst 0)) (Cst 5):                                      OK
+    Var "x":                                                                       OK
+    Var "y":                                                                       OK
+    *Var "z":                                                                      OK
+    Let "z" (Add (Cst 2) (Cst 3)) (Var "z"):                                       OK
+    Let "z" (Add (Cst 2) (Cst 3)) (Pow (Var "z") (Var "z")):                       OK
+    Let "x" (Add (Cst 3) (Var "y")) (Var "x"):                                     OK
+    Let "x" (Add (Cst 3) (Var "x")) (Var "x"):                                     OK
+    Let "x" (Add (Cst 3) (Var "y")) (Var "y"):                                     OK
+    Mul (Var "x") (Let "x" (Cst 10) (Var "x")):                                    OK
+    Mul (Let "x" (Cst 10) (Var "x")) (Var "x"):                                    OK
+    *Mul (Let "z" (Cst 10) (Var "z")) (Var "z"):                                   OK
+    Let "x" (Add (Cst 3) (Var "y")) (Let "y" (Mul (Var "x") (Cst 2)) (Var "x")):   OK
+    Let "x" (Add (Cst 3) (Var "y")) (Let "y" (Mul (Var "x") (Cst 2)) (Var "y")):   OK
+    Let "x" (Let "y" (Cst 3) (Sub (Var "x") (Var "y"))) (Mul (Var "x") (Var "y")): OK
+    Let "a" (Var "x") (Let "x" (Cst 10) (Var "a")):                                OK
+    *Let "a" (Var "u") (Let "u" (Cst 10) (Var "a")):                               OK
+    Sum "x" (Sub (Cst 3) (Cst 2)) (Add (Cst 3) (Cst 2)) (Var "x"):                 OK
+    Sum "x" (Cst 1) (Cst 5) (Pow (Var "x") (Cst 2)):                               OK
+    Sum "x" (Cst 10) (Add (Cst 5) (Cst 5)) (Mul (Cst 3) (Var "x")):                OK
+    Sum "x" (Cst 11) (Add (Cst 5) (Cst 5)) (Var "x"):                              OK
+    Sum "x" (Cst 12) (Add (Cst 5) (Cst 5)) (Div (Var "x") (Cst 0)):                OK
+    Sum "x" (Cst 123456789012345) (Cst 0) (Cst 1):                                 OK
+    Sum "x" (Cst 1) (Var "x") (Let "x" (Add (Var "x") (Cst 1)) (Var "x")):         OK
+    Sum "x" (Cst 1) (Var "x") (Sum "x" (Var "x") (Cst 10) (Var "x")):              OK
+    *Add (Var "b1") (Var "b2"):                                                    OK
+    *If (Var "b1") (Var "b2") (Var "b3"):                                          OK
+    *Sum "x" (Var "b1") (Var "b2") (Var "b3"):                                     OK
+    *Mul (Div (Cst 3) (Cst 0)) (Pow (Cst 4) (Cst (-1))):                           OK
+  evalErr tests with [x := 5, y := 6]
+    Cst 3:                                                                         OK
+    Cst 12345678901234567890:                                                      OK
+    Add (Cst 3) (Cst 5):                                                           OK
+    Sub (Cst 3) (Cst 5):                                                           OK
+    Mul (Cst 3) (Cst 5):                                                           OK
+    Mul (Cst 1234567890) (Cst 1234567890):                                         OK
+    Div (Cst 12) (Cst 3):                                                          OK
+    Div (Cst (-12)) (Cst 3):                                                       OK
+    Div (Cst 10) (Cst 3):                                                          OK
+    Div (Cst 0) (Cst 1):                                                           OK
+    Div (Cst (-10)) (Cst 3):                                                       OK
+    Div (Cst 10) (Cst (-3)):                                                       OK
+    Div (Cst (-10)) (Cst (-3)):                                                    OK
+    Pow (Cst 3) (Cst 5):                                                           OK
+    Pow (Cst (-3)) (Cst 5):                                                        OK
+    Pow (Cst (-3)) (Cst 0):                                                        OK
+    Pow (Cst 0) (Cst 0):                                                           OK
+    Pow (Cst 0) (Cst 1):                                                           OK
+    *Div (Cst 4) (Cst 0):                                                          OK
+    *Pow (Div (Cst 4) (Cst 0)) (Cst 0):                                            OK
+    *Add (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Add (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Mul (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Mul (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Div (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Div (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Pow (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
+    *Pow (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
+    *Pow (Cst 4) (Cst (-1)):                                                       OK
+    Mul (Add (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Pow (Cst 2) (Mul (Cst 3) (Cst 4)):                                             OK
+    *Mul (Cst 0) (Div (Cst 0) (Cst 0)):                                            OK
+    *Pow (Pow (Cst 2) (Cst (-1))) (Cst 0):                                         OK
+    If (Cst 1) (Cst 4) (Cst 5):                                                    OK
+    If (Cst (-3)) (Cst 4) (Cst 5):                                                 OK
+    If (Sub (Cst 3) (Cst 3)) (Cst 4) (Cst 5):                                      OK
+    If (Cst 2) (Cst 5) (Div (Cst 7) (Cst 0)):                                      OK
+    If (Cst 0) (Div (Cst 7) (Cst 0)) (Cst 5):                                      OK
+    Var "x":                                                                       OK
+    Var "y":                                                                       OK
+    *Var "z":                                                                      OK
+    Let "z" (Add (Cst 2) (Cst 3)) (Var "z"):                                       OK
+    Let "z" (Add (Cst 2) (Cst 3)) (Pow (Var "z") (Var "z")):                       OK
+    Let "x" (Add (Cst 3) (Var "y")) (Var "x"):                                     OK
+    Let "x" (Add (Cst 3) (Var "x")) (Var "x"):                                     OK
+    Let "x" (Add (Cst 3) (Var "y")) (Var "y"):                                     OK
+    Mul (Var "x") (Let "x" (Cst 10) (Var "x")):                                    OK
+    Mul (Let "x" (Cst 10) (Var "x")) (Var "x"):                                    OK
+    *Mul (Let "z" (Cst 10) (Var "z")) (Var "z"):                                   OK
+    Let "x" (Add (Cst 3) (Var "y")) (Let "y" (Mul (Var "x") (Cst 2)) (Var "x")):   OK
+    Let "x" (Add (Cst 3) (Var "y")) (Let "y" (Mul (Var "x") (Cst 2)) (Var "y")):   OK
+    Let "x" (Let "y" (Cst 3) (Sub (Var "x") (Var "y"))) (Mul (Var "x") (Var "y")): OK
+    Let "a" (Var "x") (Let "x" (Cst 10) (Var "a")):                                OK
+    *Let "a" (Var "u") (Let "u" (Cst 10) (Var "a")):                               OK
+    Sum "x" (Sub (Cst 3) (Cst 2)) (Add (Cst 3) (Cst 2)) (Var "x"):                 OK
+    Sum "x" (Cst 1) (Cst 5) (Pow (Var "x") (Cst 2)):                               OK
+    Sum "x" (Cst 10) (Add (Cst 5) (Cst 5)) (Mul (Cst 3) (Var "x")):                OK
+    Sum "x" (Cst 11) (Add (Cst 5) (Cst 5)) (Var "x"):                              OK
+    Sum "x" (Cst 12) (Add (Cst 5) (Cst 5)) (Div (Var "x") (Cst 0)):                OK
+    Sum "x" (Cst 123456789012345) (Cst 0) (Cst 1):                                 OK
+    Sum "x" (Cst 1) (Var "x") (Let "x" (Add (Var "x") (Cst 1)) (Var "x")):         OK
+    Sum "x" (Cst 1) (Var "x") (Sum "x" (Var "x") (Cst 10) (Var "x")):              OK
+    *Add (Var "b1") (Var "b2"):                                                    OK
+    *If (Var "b1") (Var "b2") (Var "b3"):                                          OK
+    *Sum "x" (Var "b1") (Var "b2") (Var "b3"):                                     OK
+    *Mul (Div (Cst 3) (Cst 0)) (Pow (Cst 4) (Cst (-1))):                           OK
+  showCompact defined?:                                                            FAIL
+    onlinetatests/Tests.hs:24:
+    No, skipping tests
+  evalEager defined?:                                                              FAIL
+    onlinetatests/Tests.hs:26:
+    No, skipping tests
+  evalLazy defined?:                                                               FAIL
+    onlinetatests/Tests.hs:28:
+    No, skipping tests
+
+7 out of 189 tests failed (0.04s)
+Warning:
+  Some tests for Part 2 failed, please comment on this in your report
+dynamic/runtests.sh FAILED
+---
+I am not fully satisfied.
+---
+Found a bug? Are the messages too cryptic?
+Let us know at Absalon.
