@@ -1,0 +1,80 @@
+- invariable variables
+- function names start with small letters
+- syntax for calling:
+	myFun arg1 arg2 <=> arg1 'myFun' arg2
+- lists - [1,2,3]
+- Concacenate with ++, append to beggining with :
+	- second one better, adding to the beggining is quick
+	- ++ takes two lists as arguments
+- array !! 4  ---> array[4]
+- list comparison is done one by one end elements are compared
+- [1..20], ['a'..'z']
+- specify the step by typing first 2 elements [2,4..20]
+- take 24 [13,26..] <- lazy evaluation, will never go further the inifinite list than the first 24 numbers
+- python-like list comprehensions: [x*2 | x <- [1..10]]  
+- also possible to add guards (after comma): [x*2 | x <- [1..10], x*2 >= 12] 
+- multiple guards separated by commas (ez stuff)
+- tuples
+	- (1,2)
+	- (1, 'two')
+	- [(1, 2), (1, 'two')] - not OK, list elements must be of the same size!
+- :t --> typeof()
+- operator :: is 'is the type of'
+- we can use it to write function declarations like so
+	removeNonUppercase :: [Char] -> [Char]  
+- separate parameters by ->
+	addThree :: Int -> Int -> Int -> Int  
+	(takes 3 Ints, returns an Int)
+- check types with :t
+- Int and Integer are not the same thing. Int is bounded, but therefore more efficient
+- type classes are Haskel's polymorph mechanism
+- type classes correspond to sets of types which have certain operations defined for them
+- type classes are kinda interfaces
+- Haskell functions do pattern matching:
+	sayMe :: (Integral a) => a -> String  
+	sayMe 1 = "One!"  
+	sayMe 2 = "Two!"  
+	sayMe 3 = "Three!"  
+	sayMe 4 = "Four!"  
+	sayMe 5 = "Five!"  
+	sayMe x = "Not between 1 and 5" 
+- underscore_ is a wildcard in pattermatching
+- patterns can bind names to reference them later
+	capital :: String -> String  
+	capital "" = "Empty string, whoops!"  
+	capital all@(x:xs) = "The first letter of " ++ all ++ " is " ++ [x]
+- Guards for boolean testing value properties (instead of patterns)
+	bmiTell :: (RealFloat a) => a -> String  
+	bmiTell bmi  
+	    | bmi <= 18.5 = "You're underweight, you emo, you!"  
+	    | bmi <= 25.0 = "You're supposedly normal. Pffft, I bet you're ugly!"  
+	    | bmi <= 30.0 = "You're fat! Lose some weight, fatty!"  
+	    | otherwise   = "You're a whale, congratulations!"
+	   (| otherwise   = "You're a whale, congratulations!")
+	   (	where bmi = weight / height ^ 2  ) 
+- let bindings
+	- let <bindings> in <expression>
+	- similar to where bindings
+	- unlike those they are expressions and therefore can be used virtually anywhere
+- let bindings can be put after list comprehensions
+	calcBmis :: (RealFloat a) => [(a, a)] -> [a]  
+	calcBmis xs = [bmi | (w, h) <- xs, let bmi = w / h ^ 2] 
+- case EXPRESSIONS
+	case expression of pattern -> result  
+		               pattern -> result  
+		               pattern -> result 
+- officially functions only accept one parameter, so the below are actually equal:
+	max 4 5  
+	(max 4) 5  
+- putting a space between stuff is a function application
+- partially calling a function (with too few parameters) creates a new function on the fly (and it's all gucci, because they are not evaluated until you actually want the result to show - LAZY)
+- partial application to infix functions
+	isUpperAlphanum :: Char -> Bool  
+	isUpperAlphanum = (`elem` ['A'..'Z'])  
+- lambdas are pretty straighforward
+- folds are used for traversing lists
+	- left folds takes accumulator, list and folds list from left to edn
+	- right folds takes list, accumulator and folds from right to beggining
+- foldl1 and foldr1 don't take accumulators, they start folding from value of first (or last) list element
+- snacr and scanl (or by analogy scanr1 and scanl1) do the exact same shit, but output a list with all the values in-between. 
+- $ is a function application operator, but it takes the lowest precedence (instead of the normal space, which has the HIGHEST precedence)
