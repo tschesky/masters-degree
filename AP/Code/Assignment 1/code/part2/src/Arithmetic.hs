@@ -215,8 +215,64 @@ tryEval a envA b envB = case (resA, resB) of
 
 -- optional parts (if not attempted, leave them unmodified)
 
+-- change ALL names to isLowerOrEqualThan...
+isLowerThanPow :: Exp -> Bool
+isLowerThanPow (Pow _ _) = False
+isLowerThanPow _ = True
+
+isLowerOrEqualPow :: Exp -> Bool
+isLowerOrEqualPow (Pow _ _) = True
+isLowerOrEqualPow exp = isLowerThanPow exp
+
+isLowerThanMul :: Exp -> Bool
+isLowerThanMul (Add _ _) = True
+isLowerThanMul (Sub _ _) = True
+isLowerThanMul _         = False
+
+isLowerOrEqualMul :: Exp -> Bool
+isLowerOrEqualMul (Mul _ _) = True
+isLowerOrEqualMul (Div _ _) = True
+isLowerOrEqualMul exp = isLowerThanMul exp
+
+isLowerThanDiv :: Exp -> Bool 
+isLowerThanDiv exp = isLowerThanMul exp
+
+isLowerOrEqualDiv :: Exp -> Bool
+isLowerOrEqualDiv exp = isLowerOrEqualMul exp
+
+isLowerThanAdd :: Exp -> Bool
+isLowerThanAdd _ = False
+
+isLowerOrEqualAdd :: Exp -> Bool
+isLowerOrEqualAdd (Add _ _) = True
+isLowerOrEqualAdd (Sub _ _) = True
+isLowerOrEqualAdd exp = isLowerThanAdd exp
+
+isLowerThanSub :: Exp -> Bool
+isLowerThanSub _ = False
+
+isLowerOrEqualSub :: Exp -> Bool
+isLowerOrEqualSub exp = isLowerOrEqualAdd exp
+
+printWithParentheses :: Exp -> Bool -> String
+printWithParentheses (Cst a) _ 
+  | a >= 0    = show a
+  | otherwise = "(" ++ (show a) ++ ")"
+printWithParentheses (Pow a b) True  = "(" ++ (printWithParentheses a (isLowerOrEqualPow a)) ++ "^" ++ (printWithParentheses b (isLowerThanPow b)) ++ ")"
+printWithParentheses (Pow a b) False = (printWithParentheses a (isLowerOrEqualPow a)) ++ "^" ++ (printWithParentheses b (isLowerThanPow b))
+printWithParentheses (Mul a b) True  = "(" ++ (printWithParentheses a (isLowerThanMul a)) ++ "*" ++ (printWithParentheses b (isLowerOrEqualMul b)) ++ ")"
+printWithParentheses (Mul a b) False = (printWithParentheses a (isLowerThanMul a)) ++ "*" ++ (printWithParentheses b (isLowerOrEqualMul b))
+printWithParentheses (Div a b) True  = "(" ++ (printWithParentheses a (isLowerThanDiv a)) ++ "/" ++ (printWithParentheses b (isLowerOrEqualDiv b)) ++ ")"
+printWithParentheses (Div a b) False = (printWithParentheses a (isLowerThanDiv a)) ++ "/" ++ (printWithParentheses b (isLowerOrEqualDiv b))
+printWithParentheses (Add a b) True  = "(" ++ (printWithParentheses a (isLowerThanAdd a)) ++ "+" ++ (printWithParentheses b (isLowerOrEqualAdd b)) ++ ")"
+printWithParentheses (Add a b) False = (printWithParentheses a (isLowerThanAdd a)) ++ "+" ++ (printWithParentheses b (isLowerOrEqualAdd b))
+printWithParentheses (Sub a b) True  = "(" ++ (printWithParentheses a (isLowerThanSub a)) ++ "-" ++ (printWithParentheses b (isLowerOrEqualSub b)) ++ ")"
+printWithParentheses (Sub a b) False = (printWithParentheses a (isLowerThanSub a)) ++ "-" ++ (printWithParentheses b (isLowerOrEqualSub b))
+printWithParentheses _ _= error "Cannot evaluate the expression, an unsupported Exp values has been passed!"
+
 showCompact :: Exp -> String
-showCompact = undefined
+showCompact (Cst a) = show a
+showCompact exp = printWithParentheses exp False
 
 evalEager :: Exp -> Env -> Either ArithError Integer
 evalEager = undefined

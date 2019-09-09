@@ -20,6 +20,46 @@ OK
 
 
 Running some dynamic tests for Part 1...
+
+/tmp/tmp.m4qrcztvYZ/tests/Tests.hs:42:17: error:
+    • Couldn't match expected type ‘Int’ with actual type ‘Tree’
+    • In the second argument of ‘insert’, namely ‘Leaf’
+      In the first argument of ‘(@?=)’, namely ‘insert 5 Leaf’
+      In the second argument of ‘($)’, namely
+        ‘insert 5 Leaf @?= Node 5 Leaf Leaf’
+   |
+42 |        insert 5 Leaf @?= Node 5 Leaf Leaf,
+   |                 ^^^^
+
+/tmp/tmp.m4qrcztvYZ/tests/Tests.hs:44:18: error:
+    • Couldn't match expected type ‘Int’ with actual type ‘Tree’
+    • In the second argument of ‘insert’, namely
+        ‘(Node 5 Leaf (Node 6 Leaf Leaf))’
+      In the first argument of ‘(@?=)’, namely
+        ‘insert 6 (Node 5 Leaf (Node 6 Leaf Leaf))’
+      In the second argument of ‘($)’, namely
+        ‘insert 6 (Node 5 Leaf (Node 6 Leaf Leaf))
+           @?= (Node 5 Leaf (Node 6 Leaf Leaf))’
+   |
+44 |        insert 6 (Node 5 Leaf (Node 6 Leaf Leaf)) @?=
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/tmp/tmp.m4qrcztvYZ/tests/Tests.hs:47:18: error:
+    • Couldn't match expected type ‘Int’ with actual type ‘Tree’
+    • In the second argument of ‘insert’, namely
+        ‘(Node 5 (Node 3 Leaf Leaf) (Node 6 Leaf Leaf))’
+      In the first argument of ‘(@?=)’, namely
+        ‘insert 4 (Node 5 (Node 3 Leaf Leaf) (Node 6 Leaf Leaf))’
+      In the second argument of ‘($)’, namely
+        ‘insert 4 (Node 5 (Node 3 Leaf Leaf) (Node 6 Leaf Leaf))
+           @?= (Node 5 (Node 3 Leaf (Node 4 Leaf Leaf)) (Node 6 Leaf Leaf))’
+   |
+47 |        insert 4 (Node 5 (Node 3 Leaf Leaf) (Node 6 Leaf Leaf)) @?=
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+--  While building package warmup-0.0.0 using:
+      /home/user/.stack/setup-exe-cache/x86_64-linux/Cabal-simple_mPHDZzAJ_2.4.0.1_ghc-8.6.5 --builddir=.stack-work/dist/x86_64-linux/Cabal-2.4.0.1 build lib:warmup test:part1-test-suite --ghc-options ""
+    Process exited with code: ExitFailure 1
 Warning:
   Some tests for Part 1 failed, please comment on this in your report
 
@@ -62,10 +102,7 @@ Arithmetic Tests
     Pow (Cst 0) (Cst 0):                                                           OK
     Pow (Cst 0) (Cst 1):                                                           OK
     *Div (Cst 4) (Cst 0):                                                          OK
-    *Pow (Div (Cst 4) (Cst 0)) (Cst 0):                                            FAIL
-      onlinetatests/Tests.hs:270:
-      expected: <failure>
-       but got: 1
+    *Pow (Div (Cst 4) (Cst 0)) (Cst 0):                                            OK
     *Add (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
     *Add (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
     *Mul (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
@@ -78,10 +115,7 @@ Arithmetic Tests
     Mul (Add (Cst 2) (Cst 3)) (Cst 4):                                             OK
     Pow (Cst 2) (Mul (Cst 3) (Cst 4)):                                             OK
     *Mul (Cst 0) (Div (Cst 0) (Cst 0)):                                            OK
-    *Pow (Pow (Cst 2) (Cst (-1))) (Cst 0):                                         FAIL
-      onlinetatests/Tests.hs:270:
-      expected: <failure>
-       but got: 1
+    *Pow (Pow (Cst 2) (Cst (-1))) (Cst 0):                                         OK
   extendEnv tests
     (extendEnv "x" 5 initEnv) "x":                                                 OK
     (extendEnv "x" 5 initEnv) "y":                                                 OK
@@ -109,10 +143,7 @@ Arithmetic Tests
     Pow (Cst 0) (Cst 0):                                                           OK
     Pow (Cst 0) (Cst 1):                                                           OK
     *Div (Cst 4) (Cst 0):                                                          OK
-    *Pow (Div (Cst 4) (Cst 0)) (Cst 0):                                            FAIL
-      onlinetatests/Tests.hs:270:
-      expected: <failure>
-       but got: 1
+    *Pow (Div (Cst 4) (Cst 0)) (Cst 0):                                            OK
     *Add (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
     *Add (Div (Cst 4) (Cst 0)) (Cst 1):                                            OK
     *Mul (Cst 1) (Div (Cst 4) (Cst 0)):                                            OK
@@ -125,10 +156,7 @@ Arithmetic Tests
     Mul (Add (Cst 2) (Cst 3)) (Cst 4):                                             OK
     Pow (Cst 2) (Mul (Cst 3) (Cst 4)):                                             OK
     *Mul (Cst 0) (Div (Cst 0) (Cst 0)):                                            OK
-    *Pow (Pow (Cst 2) (Cst (-1))) (Cst 0):                                         FAIL
-      onlinetatests/Tests.hs:270:
-      expected: <failure>
-       but got: 1
+    *Pow (Pow (Cst 2) (Cst (-1))) (Cst 0):                                         OK
     If (Cst 1) (Cst 4) (Cst 5):                                                    OK
     If (Cst (-3)) (Cst 4) (Cst 5):                                                 OK
     If (Sub (Cst 3) (Cst 3)) (Cst 4) (Cst 5):                                      OK
@@ -229,9 +257,25 @@ Arithmetic Tests
     *If (Var "b1") (Var "b2") (Var "b3"):                                          OK
     *Sum "x" (Var "b1") (Var "b2") (Var "b3"):                                     OK
     *Mul (Div (Cst 3) (Cst 0)) (Pow (Cst 4) (Cst (-1))):                           OK
-  showCompact defined?:                                                            FAIL
-    onlinetatests/Tests.hs:24:
-    No, skipping tests
+  showCompact tests
+    Mul (Add (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Add (Mul (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Pow (Div (Cst 2) (Cst 3)) (Sub (Cst 4) (Cst 5)):                               OK
+    Add (Sub (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Sub (Cst 2) (Add (Cst 3) (Cst 4)):                                             OK
+    Div (Mul (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Mul (Cst 2) (Div (Cst 3) (Cst 4)):                                             OK
+    Pow (Cst 2) (Pow (Cst 3) (Cst 4)):                                             OK
+    Pow (Pow (Cst 2) (Cst 3)) (Cst 4):                                             OK
+    Cst 0:                                                                         OK
+    Cst 3:                                                                         OK
+    Cst (-3):                                                                      OK
+    Add (Cst (-3)) (Cst (-4)):                                                     FAIL
+      onlinetatests/Tests.hs:245:
+      expected: "-3+(-4)"
+       but got: "(-3)+(-4)"
+    Mul (Cst (-3)) (Cst (-4)):                                                     OK
+    Pow (Cst (-3)) (Cst (-4)):                                                     OK
   evalEager defined?:                                                              FAIL
     onlinetatests/Tests.hs:26:
     No, skipping tests
@@ -239,7 +283,11 @@ Arithmetic Tests
     onlinetatests/Tests.hs:28:
     No, skipping tests
 
-7 out of 189 tests failed (0.04s)
+3 out of 203 tests failed (0.03s)
+Test suite failure for package arithmetic-0.0.0
+    part2-test-suite:  exited with: ExitFailure 1
+Logs printed to console
+
 Warning:
   Some tests for Part 2 failed, please comment on this in your report
 dynamic/runtests.sh FAILED
