@@ -21,7 +21,7 @@ OK
 
 Running some dynamic tests for Part 1...
 
-/tmp/tmp.m4qrcztvYZ/tests/Tests.hs:42:17: error:
+/tmp/tmp.BjysgexZuU/tests/Tests.hs:42:17: error:
     • Couldn't match expected type ‘Int’ with actual type ‘Tree’
     • In the second argument of ‘insert’, namely ‘Leaf’
       In the first argument of ‘(@?=)’, namely ‘insert 5 Leaf’
@@ -31,7 +31,7 @@ Running some dynamic tests for Part 1...
 42 |        insert 5 Leaf @?= Node 5 Leaf Leaf,
    |                 ^^^^
 
-/tmp/tmp.m4qrcztvYZ/tests/Tests.hs:44:18: error:
+/tmp/tmp.BjysgexZuU/tests/Tests.hs:44:18: error:
     • Couldn't match expected type ‘Int’ with actual type ‘Tree’
     • In the second argument of ‘insert’, namely
         ‘(Node 5 Leaf (Node 6 Leaf Leaf))’
@@ -44,7 +44,7 @@ Running some dynamic tests for Part 1...
 44 |        insert 6 (Node 5 Leaf (Node 6 Leaf Leaf)) @?=
    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-/tmp/tmp.m4qrcztvYZ/tests/Tests.hs:47:18: error:
+/tmp/tmp.BjysgexZuU/tests/Tests.hs:47:18: error:
     • Couldn't match expected type ‘Int’ with actual type ‘Tree’
     • In the second argument of ‘insert’, namely
         ‘(Node 5 (Node 3 Leaf Leaf) (Node 6 Leaf Leaf))’
@@ -270,10 +270,7 @@ Arithmetic Tests
     Cst 0:                                                                         OK
     Cst 3:                                                                         OK
     Cst (-3):                                                                      OK
-    Add (Cst (-3)) (Cst (-4)):                                                     FAIL
-      onlinetatests/Tests.hs:245:
-      expected: "-3+(-4)"
-       but got: "(-3)+(-4)"
+    Add (Cst (-3)) (Cst (-4)):                                                     OK
     Mul (Cst (-3)) (Cst (-4)):                                                     OK
     Pow (Cst (-3)) (Cst (-4)):                                                     OK
   evalEager defined?:                                                              FAIL
@@ -283,7 +280,7 @@ Arithmetic Tests
     onlinetatests/Tests.hs:28:
     No, skipping tests
 
-3 out of 203 tests failed (0.03s)
+2 out of 203 tests failed (0.03s)
 Test suite failure for package arithmetic-0.0.0
     part2-test-suite:  exited with: ExitFailure 1
 Logs printed to console

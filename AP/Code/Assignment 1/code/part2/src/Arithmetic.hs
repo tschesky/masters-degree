@@ -227,6 +227,7 @@ isLowerOrEqualPow exp = isLowerThanPow exp
 isLowerThanMul :: Exp -> Bool
 isLowerThanMul (Add _ _) = True
 isLowerThanMul (Sub _ _) = True
+isLowerThanMul (Cst _)   = True
 isLowerThanMul _         = False
 
 isLowerOrEqualMul :: Exp -> Bool
@@ -246,6 +247,7 @@ isLowerThanAdd _ = False
 isLowerOrEqualAdd :: Exp -> Bool
 isLowerOrEqualAdd (Add _ _) = True
 isLowerOrEqualAdd (Sub _ _) = True
+isLowerOrEqualAdd (Cst _) = True
 isLowerOrEqualAdd exp = isLowerThanAdd exp
 
 isLowerThanSub :: Exp -> Bool
@@ -255,9 +257,10 @@ isLowerOrEqualSub :: Exp -> Bool
 isLowerOrEqualSub exp = isLowerOrEqualAdd exp
 
 printWithParentheses :: Exp -> Bool -> String
-printWithParentheses (Cst a) _ 
+printWithParentheses (Cst a) True
   | a >= 0    = show a
   | otherwise = "(" ++ (show a) ++ ")"
+printWithParentheses (Cst a) False = show a
 printWithParentheses (Pow a b) True  = "(" ++ (printWithParentheses a (isLowerOrEqualPow a)) ++ "^" ++ (printWithParentheses b (isLowerThanPow b)) ++ ")"
 printWithParentheses (Pow a b) False = (printWithParentheses a (isLowerOrEqualPow a)) ++ "^" ++ (printWithParentheses b (isLowerThanPow b))
 printWithParentheses (Mul a b) True  = "(" ++ (printWithParentheses a (isLowerThanMul a)) ++ "*" ++ (printWithParentheses b (isLowerOrEqualMul b)) ++ ")"
