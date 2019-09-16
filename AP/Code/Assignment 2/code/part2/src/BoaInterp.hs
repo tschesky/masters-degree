@@ -20,11 +20,11 @@ newtype Comp a = Comp {runComp :: Env -> (Either RunError a, [String]) }
 instance Monad Comp where
   return a = Comp (\_e -> (Right a, []))
   m >>= f  = Comp (\e -> let (firstA, firstSL) = (runComp m) e in
-                          let a1 = firstA >>= (\a1' -> Right a1') in --extract a1 from m 
-                            case a1 of
-                              (Left err) -> ((Left err), firstSL)
-                              (Right val) -> let (secondA, secondSL) = runComp (f val) e in -- apply f to a1, then evaluate the returned a (secondA)
-                                (secondA >>= (\a2 -> Right a2), firstSL ++ secondSL)) -- construct tuple containing Either
+                            case firstA of
+                              (Left err) -> ((Left err), firstSL) -- error occured in m, pass it on!
+                              -- apply f to val if no error ocurred , then evaluate the returned a (secondA)
+                              (Right val) -> let (secondA, secondSL) = runComp (f val) e in 
+                                (secondA, firstSL ++ secondSL))
                             
                        
 
@@ -88,7 +88,7 @@ operate In _ _ = Left "In operator takes only Lists as second argument!"
 
 apply :: FName -> [Value] -> Comp Value 
 apply "range" ((IntVal a):(IntVal b):(IntVal step):rest) 
-  | rest == [] = return (ListVal [(IntVal x) | x <- [a, (a+step)..(b-(signum step))]])
+  | rest == [] = return (ListVal [(IntVal x) | x <- [a, (a+step)..(b-(signum step))]]) -- if step is negative, last possible value is b+1
   | step == 0 = abort (EBadArg "range function called with zero step")
   | otherwise = abort (EBadArg "range function called with >3 arguments.")
 apply "range" ((IntVal a):(IntVal b):rest)
