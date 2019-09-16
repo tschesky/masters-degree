@@ -88,29 +88,28 @@ operate In _ _ = Left "In operator takes only Lists as second argument!"
 
 apply :: FName -> [Value] -> Comp Value 
 apply "range" ((IntVal a):(IntVal b):(IntVal step):rest) 
-  | rest == [] = return (ListVal [(IntVal x) | x <- [a, (a+step)..b]])
+  | rest == [] = return (ListVal [(IntVal x) | x <- [a, (a+step)..(b-(signum step))]])
   | step == 0 = abort (EBadArg "range function called with zero step")
   | otherwise = abort (EBadArg "range function called with >3 arguments.")
 apply "range" ((IntVal a):(IntVal b):rest)
-  | rest == [] = return (ListVal [(IntVal x) | x <- [a, (a+1)..b]])
+  | rest == [] = return (ListVal [(IntVal x) | x <- [a, (a+1)..(b-1)]])
   | otherwise = abort (EBadArg "range called with non-integer arguments.") 
 apply "range" ((IntVal b):rest)
-  | rest == [] = return (ListVal [(IntVal x) | x <- [0, 1..b]])
+  | rest == [] = return (ListVal [(IntVal x) | x <- [0, 1..(b-1)]])
   | otherwise = abort (EBadArg "range called with non-integer arguments.") 
 apply "range" [] = abort (EBadArg "range called with zero arguments."  )
 apply "range" _ = abort (EBadArg "range called with non-integer arguments.")
 
 apply "print" x = do output (print' x False)
                      return NoneVal 
-                               
 apply fname _ = abort (EBadFun fname)
 
 -- Bool indicates if value is in list
 print' :: [Value] -> Bool -> String
 print' [] _ = ""
-print' ((StringVal s):xs) il
-  | xs == [] = if il then "'" ++ s ++ "'" else s
-  | otherwise = (if il then "'" ++ s ++ "', " else s ++ " ") ++ (print' xs il)
+-- print' ((StringVal s):xs) il
+--   | xs == [] = if il then "'" ++ s ++ "'" else s
+--   | otherwise = (if il then "'" ++ s ++ "', " else s ++ " ") ++ (print' xs il)
 print' (x:xs) il
   | xs == [] = (printVal x)
   | otherwise = (if il then (printVal x) ++ ", " else (printVal x) ++ " ") ++ (print' xs il)
@@ -134,7 +133,6 @@ eval (Oper op e1 e2) = do v1 <- eval e1
                             (Right res) -> return res
 eval (Not e) = do v <- eval e
                   if truthy v then return FalseVal else return TrueVal
-eval (Call fname []) = abort (EBadArg ("No arguments supplied to function " ++ fname))
 eval (Call fname arge) = do argv <- eval (List arge)
                             case argv of
                               (ListVal l) -> apply fname l
@@ -146,23 +144,23 @@ eval (List (e1:es)) = do v1 <- eval e1
                           (ListVal l) -> return (ListVal (v1 : l))
                           _ -> error "this code should be unreachable."
 
-eval (Compr e []) = eval e
+eval (Compr e []) = do lv <- eval e
+                       return (ListVal [lv])
 eval (Compr _ ((QFor _ (Const (ListVal []))):_)) = return (ListVal [])
 eval (Compr e ((QFor vname (Const (ListVal (l:ls)))):qs)) = do res1 <- withBinding vname l (eval (Compr e qs))
                                                                res2 <- eval (Compr e ((QFor vname (Const (ListVal ls))):qs))
                                                                case res2 of 
                                                                 (ListVal rl2) -> case res1 of
-                                                                                  NoneVal -> return (ListVal rl2)
                                                                                   (ListVal rl1) -> return (ListVal (rl1 ++ rl2))
-                                                                                  _ -> return (ListVal (res1 : rl2))
-                                                                _ -> error "this code should be unreachable" -- QFor always returns a ListVal                                                                                         
+                                                                                  _ -> error "Compr did not return a list. Impl error!" -- return (ListVal (res1 : rl2))
+                                                                _ -> error "Compr did not return a list. Impl error!" -- QFor always returns a ListVal                                                                                         
 -- evaluate list and call the eval with const listval, see above
 eval (Compr e ((QFor vname fe):qs)) = do fv <- eval fe
                                          case fv of
                                            (ListVal l) -> eval (Compr e ((QFor vname (Const (ListVal l))):qs))
                                            _ -> abort (EBadArg "2nd. argument of Compr should be a list.")
 eval (Compr e ((QIf ie):qs)) = do iv <- eval ie
-                                  if (truthy iv) then eval (Compr e qs) else return NoneVal
+                                  if (truthy iv) then eval (Compr e qs) else return (ListVal [])
 
 exec :: Program -> Comp ()
 exec [] = return ()
