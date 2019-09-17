@@ -20,7 +20,7 @@ tests :: TestTree
 tests = testGroup "Tests" [unitTst, propertyTst]
 
 unitTst :: TestTree
-unitTst = testGroup "UnitTests" [truthyTst, equalityUnitTst]
+unitTst = testGroup "UnitTests" [truthyTst]
 
 truthyTst = testGroup "Testing truth values"
     [testCase "truthy Nothing"
@@ -44,8 +44,11 @@ truthyTst = testGroup "Testing truth values"
     testCase "truthy [True, False]]"
         (assertBool "" (True == truthy(ListVal [TrueVal, FalseVal])))]
 
-expTests = testGroup "Example"
-    [ QC.testProperty "Plus a b == Plus b a" $
+propertyTst :: TestTree
+propertyTst = testGroup "Test properties of arithmetic operators" [prop_com]
+
+prop_com = testGroup "Test commutative property"
+    [ QC.testProperty "Commutative property of Plus" $
           \a b -> operate Plus (IntVal a) (IntVal b) == operate Plus (IntVal b) (IntVal a)]
 
 -- Unit tests for simple auxiliaries
