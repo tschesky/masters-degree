@@ -47,7 +47,7 @@ truthyTst = testGroup "Testing truth values"
         (assertBool "" (True == truthy(ListVal [TrueVal, FalseVal])))]
 
 propertyTst :: TestTree
-propertyTst = testGroup "Test properties of arithmetic operators" [prop_com, prop_ass]
+propertyTst = testGroup "Test properties of arithmetic operators" [prop_com, prop_ass, prop_apply_range]
 
 -- commutative
 newtype CommOperators = CommOp Op
@@ -60,15 +60,25 @@ newtype AssOperators = AssOp Op
 instance QC.Arbitrary AssOperators where
  arbitrary = fmap AssOp (QC.elements [Plus, Times])
 
-
 prop_com = testGroup "Test commutative property"
     [ QC.testProperty "Commutative property of Plus, Mul and Eq" $
           \(CommOp o)  a b -> operate o (IntVal a) (IntVal b) == operate o (IntVal b) (IntVal a)]
 
 prop_ass = testGroup "Test commutative property"
-    [ QC.testProperty "Associative property of Plus, Mul" $
-        testAssociative
+    [ QC.testProperty "Associative property of Plus, Mul" $ testAssociative
     ]
+
+prop_apply_range = testGroup "Test range function properties"
+    [ QC.testProperty "Size of the generated list" $ testLength
+    ]
+
+testLength start end (QC.NonZero step) = (do list <- apply "range" [IntVal start, IntVal end, (IntVal step)]
+                                             case list of
+                                                (ListVal listVal') -> return $ length listVal'
+                                                _                  -> return (-1))
+                                          ==
+                                            if ((step > 0) && (start >= end)) || ((step < 0) && (start <= end)) then createComp 0
+                                                else (if (abs step > abs(end - start)) then createComp 1 else createComp $  ceiling $ abs (fromIntegral (end - start)/ fromIntegral step))
 
 -- testAssociative :: AssOp -> Value -> Value -> Value -> 
 testAssociative (AssOp o) a b c = (do ab <- (operate o (IntVal a) (IntVal b))
@@ -78,25 +88,14 @@ testAssociative (AssOp o) a b c = (do ab <- (operate o (IntVal a) (IntVal b))
                                     (do bc <- (operate o (IntVal b) (IntVal c))
                                         abc <- (operate o (IntVal a) bc)
                                         return abc)
-                                    
 
-                                                 -- Unit tests for simple auxiliaries
--- Property testing for operate
 ---- Commutative  - Plus, Times
 ---- Associative  - 
 ---- Why why skip distrubutative
----- Identity 
+---- Identity
 
--- expTests = testGroup "testing expression properties"
---     [QC.testProperty "a + b = b + a" $ \a b -> a + b == b + a]
+createComp :: a -> Comp a
+createComp a = Comp (\_e -> (Right a, []))
 
--- prop_com_add a b = operate Plus a b == operate Plus b a
-
--- propertyTst :: TestTree
--- propertyTst = testGroup "PropertyTests" [simpleProp]
-
--- simpleProp = testGroup "Example property test" [QC.testProperty "blahblah" $ prop_compST]
-
--- prop_compST a = monadicST $ do
---   value  <- run (Comp a  >>= (+3))
---   Test.QuickCheck.Monadic.assert $ 8 == value
+instance (Eq a) => Eq (Comp a) where
+    (Comp a) == (Comp b) = ((a []) == (b []))
