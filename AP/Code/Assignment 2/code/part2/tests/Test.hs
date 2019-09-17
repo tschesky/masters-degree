@@ -8,7 +8,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Test.QuickCheck.Monadic as QCM
 import qualified Test.Tasty.QuickCheck as QC
-
+import Control.Monad
 -- Remove later
 import Data.List
 import Data.Ord
@@ -47,7 +47,7 @@ truthyTst = testGroup "Testing truth values"
         (assertBool "" (True == truthy(ListVal [TrueVal, FalseVal])))]
 
 propertyTst :: TestTree
-propertyTst = testGroup "Test properties of arithmetic operators" [prop_com, prop_ass, prop_apply_range]
+propertyTst = testGroup "Test properties of arithmetic operators" [prop_com, prop_ass, prop_apply_range, prop_in_op]
 
 -- commutative
 newtype CommOperators = CommOp Op
@@ -88,6 +88,46 @@ testAssociative (AssOp o) a b c = (do ab <- (operate o (IntVal a) (IntVal b))
                                     (do bc <- (operate o (IntVal b) (IntVal c))
                                         abc <- (operate o (IntVal a) bc)
                                         return abc)
+
+newtype ListValue = LV Value deriving (Eq, Show)
+instance QC.Arbitrary ListValue where
+    arbitrary = QC.sized listVal
+
+instance QC.Arbitrary Value where
+    arbitrary = sizedVal
+
+sizedVal = QC.sized valN
+-- valN :: Int -> Gen a
+valN 0 =  QC.oneof $ [ return NoneVal,
+                return TrueVal,
+                return FalseVal,
+                liftM IntVal QC.arbitrary,
+                liftM StringVal QC.arbitrary,
+                return (ListVal [])
+            ]
+valN n = QC.oneof [return NoneVal,
+                    return TrueVal,
+                    return FalseVal,
+                    liftM IntVal QC.arbitrary,
+                    liftM StringVal QC.arbitrary,
+                    do res <- subVal
+                       return (ListVal [res])
+                   ]
+                where subVal = (valN (n `div` 2))
+listVal n = do res <- subVal
+               return $ LV (ListVal [res])
+            where subVal = (valN (n `div` 2))
+
+
+prop_in_op = testGroup "Test In operator property"
+                [ QC.testProperty "Test In operator property" $
+                    (\a (LV list@(ListVal b)) -> let inVal = (operate In a list) in
+                                                case inVal of 
+                                                    (Right v) -> truthy(v) == (a `elem` b)
+                                                    _         -> False)
+                ]
+                    
+                                
 
 ---- Commutative  - Plus, Times
 ---- Associative  - 
