@@ -47,7 +47,7 @@ truthyTst = testGroup "Testing truth values"
         (assertBool "" (True == truthy(ListVal [TrueVal, FalseVal])))]
 
 propertyTst :: TestTree
-propertyTst = testGroup "Test properties of arithmetic operators" [prop_com, prop_ass, prop_apply_range, prop_in_op]
+propertyTst = testGroup "Test properties of arithmetic operators" [prop_com, prop_ass, prop_apply_range, prop_in_op, prop_look_withBinding]
 
 -- commutative
 newtype CommOperators = CommOp Op
@@ -126,7 +126,14 @@ prop_in_op = testGroup "Test In operator property"
                                                     (Right v) -> truthy(v) == (a `elem` b)
                                                     _         -> False)
                 ]
-                    
+prop_look_withBinding = testGroup "test look and withBinding"
+                        [ QC.testProperty "test look and withBinding" $
+                            (\vname val -> withBinding vname val (do a <- look vname
+                                                                     return (a == val)) 
+                                                   
+                                            == 
+                                            (return True))
+                        ]
                                 
 
 ---- Commutative  - Plus, Times
