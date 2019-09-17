@@ -12,9 +12,11 @@ import Test.Tasty.QuickCheck as QC
 -- Remove later
 import Data.List
 import Data.Ord
+import System.Environment
 
 main :: IO ()
-main = defaultMain $ localOption (mkTimeout 1000000) tests
+main = do setEnv "TASTY_QUICKCHECK_VERBOSE" "FALSE"
+          defaultMain $ localOption (mkTimeout 1000000) tests
 
 tests :: TestTree
 tests = testGroup "Tests" [unitTst, propertyTst]
@@ -47,9 +49,26 @@ truthyTst = testGroup "Testing truth values"
 propertyTst :: TestTree
 propertyTst = testGroup "Test properties of arithmetic operators" [prop_com]
 
+-- commutative
+newtype CommOperators = CommOp Op
+    deriving (Eq, Show)
+instance QC.Arbitrary CommOperators where
+ arbitrary = fmap CommOp (QC.elements [Plus, Times, Eq])
+
+-- newtype AssOperators = AssOp Op
+--  deriving (Eq, Show)
+-- instance QC.Arbitrary AssOperators where
+-- arbitrary = fmap AssOp (QC.elements [Plus, Times])
+
+
 prop_com = testGroup "Test commutative property"
-    [ QC.testProperty "Commutative property of Plus" $
-          \a b -> operate Plus (IntVal a) (IntVal b) == operate Plus (IntVal b) (IntVal a)]
+    [ QC.testProperty "Commutative property of Plus, Mul and Eq" $
+          \(CommOp o)  a b -> operate o (IntVal a) (IntVal b) == operate o (IntVal b) (IntVal a)]
+
+-- prop_ass = testGroup "Test commutative property"
+-- [ QC.testProperty "Associative property of Plus, Mul and Eq" $
+--     \(AssOp o)  a b -> operate o (IntVal a) (IntVal b) == operate o (IntVal b) (IntVal a)]
+      
 
 -- Unit tests for simple auxiliaries
 -- Property testing for operate
