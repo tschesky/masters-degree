@@ -6,8 +6,8 @@ import BoaInterp
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.QuickCheck.Monadic
-import Test.Tasty.QuickCheck as QC
+import qualified Test.QuickCheck.Monadic as QCM
+import qualified Test.Tasty.QuickCheck as QC
 
 -- Remove later
 import Data.List
@@ -15,7 +15,7 @@ import Data.Ord
 import System.Environment
 
 main :: IO ()
-main = do setEnv "TASTY_QUICKCHECK_VERBOSE" "FALSE"
+main = do setEnv "TASTY_QUICKCHECK_VERBOSE" "TRUE"
           defaultMain $ localOption (mkTimeout 1000000) tests
 
 tests :: TestTree
@@ -47,7 +47,7 @@ truthyTst = testGroup "Testing truth values"
         (assertBool "" (True == truthy(ListVal [TrueVal, FalseVal])))]
 
 propertyTst :: TestTree
-propertyTst = testGroup "Test properties of arithmetic operators" [prop_com]
+propertyTst = testGroup "Test properties of arithmetic operators" [prop_com, prop_ass]
 
 -- commutative
 newtype CommOperators = CommOp Op
@@ -55,22 +55,32 @@ newtype CommOperators = CommOp Op
 instance QC.Arbitrary CommOperators where
  arbitrary = fmap CommOp (QC.elements [Plus, Times, Eq])
 
--- newtype AssOperators = AssOp Op
---  deriving (Eq, Show)
--- instance QC.Arbitrary AssOperators where
--- arbitrary = fmap AssOp (QC.elements [Plus, Times])
+newtype AssOperators = AssOp Op
+ deriving (Eq, Show)
+instance QC.Arbitrary AssOperators where
+ arbitrary = fmap AssOp (QC.elements [Plus, Times])
 
 
 prop_com = testGroup "Test commutative property"
     [ QC.testProperty "Commutative property of Plus, Mul and Eq" $
           \(CommOp o)  a b -> operate o (IntVal a) (IntVal b) == operate o (IntVal b) (IntVal a)]
 
--- prop_ass = testGroup "Test commutative property"
--- [ QC.testProperty "Associative property of Plus, Mul and Eq" $
---     \(AssOp o)  a b -> operate o (IntVal a) (IntVal b) == operate o (IntVal b) (IntVal a)]
-      
+prop_ass = testGroup "Test commutative property"
+    [ QC.testProperty "Associative property of Plus, Mul" $
+        testAssociative
+    ]
 
--- Unit tests for simple auxiliaries
+-- testAssociative :: AssOp -> Value -> Value -> Value -> 
+testAssociative (AssOp o) a b c = (do ab <- (operate o (IntVal a) (IntVal b))
+                                      abc <- (operate o ab (IntVal c))
+                                      return abc)
+                                  ==
+                                    (do bc <- (operate o (IntVal b) (IntVal c))
+                                        abc <- (operate o (IntVal a) bc)
+                                        return abc)
+                                    
+
+                                                 -- Unit tests for simple auxiliaries
 -- Property testing for operate
 ---- Commutative  - Plus, Times
 ---- Associative  - 
