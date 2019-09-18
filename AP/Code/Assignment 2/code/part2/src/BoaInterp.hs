@@ -25,9 +25,7 @@ instance Monad Comp where
                               -- apply f to val if no error ocurred , then evaluate the returned a (secondA)
                               (Right val) -> let (secondA, secondSL) = runComp (f val) e in 
                                 (secondA, firstSL ++ secondSL))
-                            
-                       
-
+          
 -- You shouldn't need to modify these
 instance Functor Comp where
   fmap = liftM
@@ -64,7 +62,7 @@ operate Plus (IntVal v1) (IntVal v2) = Right $ IntVal $ v1 + v2
 operate Plus _ _ = Left "Plus operation only defined on two IntVals"
 operate Minus (IntVal v1) (IntVal v2) = Right $ IntVal $ v1 - v2
 operate Minus _ _ = Left "Minus operation only defined on two IntVals"
-
+-- higher precedence
 operate Times (IntVal v1) (IntVal v2) = Right $ IntVal $ v1 * v2
 operate Times _ _ = Left "Times operation only defined on two IntVals" 
 operate Div (IntVal v1) (IntVal v2)
@@ -85,7 +83,6 @@ operate Greater _ _ = Left "Greater operation only defined on two Intvals"
 operate In v1 (ListVal v2) = Right $ if v1 `elem` v2 then TrueVal else FalseVal
 operate In _ _ = Left "In operator takes only Lists as second argument!"
 
-
 apply :: FName -> [Value] -> Comp Value 
 apply "range" ((IntVal a):(IntVal b):(IntVal step):rest) 
   | rest == [] = return (ListVal [(IntVal x) | x <- [a, (a+step)..(b-(signum step))]]) -- if step is negative, last possible value is b+1
@@ -99,7 +96,6 @@ apply "range" ((IntVal b):rest)
   | otherwise = abort (EBadArg "range called with non-integer arguments.") 
 apply "range" [] = abort (EBadArg "range called with zero arguments."  )
 apply "range" _ = abort (EBadArg "range called with non-integer arguments.")
-
 apply "print" x = do output (print' x False)
                      return NoneVal 
 apply fname _ = abort (EBadFun fname)
@@ -107,9 +103,6 @@ apply fname _ = abort (EBadFun fname)
 -- Bool indicates if value is in list
 print' :: [Value] -> Bool -> String
 print' [] _ = ""
--- print' ((StringVal s):xs) il
---   | xs == [] = if il then "'" ++ s ++ "'" else s
---   | otherwise = (if il then "'" ++ s ++ "', " else s ++ " ") ++ (print' xs il)
 print' (x:xs) il
   | xs == [] = (printVal x)
   | otherwise = (if il then (printVal x) ++ ", " else (printVal x) ++ " ") ++ (print' xs il)
@@ -169,10 +162,8 @@ exec ((SDef vname e):sts) = do v <- eval e
 exec ((SExp e):sts) =       do eval e
                                exec sts
 
-
 execute :: Program -> ([String], Maybe RunError)
 execute p = case err of
              (Left err) -> (res, Just err)
              (Right _) -> (res, Nothing)
   where (err, res) = runComp (exec p) []
-               
