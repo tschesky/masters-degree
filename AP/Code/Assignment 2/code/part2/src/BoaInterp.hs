@@ -129,13 +129,13 @@ eval (Not e) = do v <- eval e
 eval (Call fname arge) = do argv <- eval (List arge)
                             case argv of
                               (ListVal l) -> apply fname l
-                              _ -> error "this code should be unreachable."
+                              _ -> error "this code should be unreachable." -- eval(List should always evaluate to a listval)
 eval (List []) = return (ListVal [])
 eval (List (e1:es)) = do v1 <- eval e1
                          vs <- eval (List es)
                          case vs of 
                           (ListVal l) -> return (ListVal (v1 : l))
-                          _ -> error "this code should be unreachable."
+                          _ -> error "this code should be unreachable." -- eval(List should always evaluate to a listval)
 
 eval (Compr e []) = do lv <- eval e
                        return (ListVal [lv])
