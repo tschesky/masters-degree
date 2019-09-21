@@ -1,0 +1,8 @@
+*.exe
+*.hi
+*.o
+**.stack-work
+*.lock
+*.cabal
+michal
+*.zip
