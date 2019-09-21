@@ -1,0 +1,63 @@
+-- Program ::= Stmts
+
+-- Stmts ::= Stmt
+--         | Stmt ‘;’ Stmts
+
+-- Stmt ::= ident ‘=’ Expr
+--         | Expr
+
+-- Expr ::= Term Expr'
+
+-- Expr' ::= e
+--         | LogicalExpr
+--         | not Expr'
+
+-- LogicalExpr ::= MathExpr
+--               | RelOp Term MathExpr
+
+-- MathExpr    ::= MathExpr' |
+--               e | AddOp Term Expr'
+
+-- MathExpr'    ::= Term
+--               | MulOp Term Expr'
+
+-- Term ::= numConst
+--        | stringConst
+--        | BoolVal
+--        | ident IdentExpr
+--        | 'not' Expr
+--        | '(' Expr ')'
+--        | '[' Exprz ']'
+--        | ‘[’ Expr ForQual Qualz ‘]’
+
+-- IdentExpr ::= e
+--             | '(' Exprz ')'
+
+-- BoolVal ::= 'None' | 'True ' | 'False'
+
+-- Oper ::= AddOp
+--        | MultOp
+--        | RelOp
+
+-- AddOp   ::= ‘+’ | ‘-’ 
+-- MultOp  ::= ‘*’ | ‘//’ | ‘%’
+-- RelOp   ::= ‘==’ | ‘!=’ | ‘<’ | ‘<=’ | ‘>’ | ‘>=’ | ‘in’ | ‘not’ ‘in’
+
+
+-- ForQual ::= ‘for’ ident ‘in’ Expr
+
+-- IfQual ::= ‘if’ Expr
+
+-- Qualz ::= e
+--         | ForQual Qualz
+--         | IfQual Qualz
+
+-- Exprz ::= e
+--         | Exprs
+
+-- Exprs ::= Expr
+--         | Expr ‘,’ Exprs
+
+-- ident ::= (see text)
+-- numConst ::= (see text)
+-- stringConst ::= (see text)
