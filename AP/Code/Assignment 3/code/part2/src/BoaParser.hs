@@ -59,58 +59,133 @@ printEscaped = concat <$> (many $ ((toString (satisfy printableNoQBS)) --  print
                             (((char '\\') *> (char '\n') >> return "")))) -- need string because we can't return empty char
 
 -- testString = ['\'', 'f', 'o', '\\', '\\', 'o', '\\', '\n', 'b', '\\', 'n', 'a', '\\', '\'', 'r', '\'']
-                  
-expr :: Parser Exp
-expr  = (Const <$> StringVal <$> stringConst)
-        <|>
-        (try $ liftA2 Call ident ((char '(') *> (expr `sepBy` (char ','))))
-        <|>
-        (string "not") *> (Not <$> expr)
-        <|>
-        (try $ List <$> between (toString $ char '[') (toString $ char ']') (expr `sepBy` (char ',')))
-        <|>
-        (between (toString $ char '[') (toString $ char ']') (listComp))
-
-
-
--- term :: Parser Exp
--- term t1 = factor
---           <|>
---           ((Oper Times t1) <$> (char '*' *> term))
---           <|> 
---           ((Oper Div t1) <$> (string "//" *> term))
---           <|> 
---           ((Oper Mod t1) <$> (char '%' *> term))
-
--- factor :: Parser Exp
--- factor = (Const <$> IntVal <$> numConst)
---          <|>
---          between (toString $ char '(') (toString $ char ')') expr
---          <|>
---          (try (Var <$> ident)) -- 2 cases that start with ident 
---          <|>
---          (string "None" *> return (Const NoneVal))
---          <|>
---          (string "False" *> return (Const FalseVal))
---          <|>
---          (string "True" *> return (Const TrueVal))
-
+           
+-- list = [x*x for x in [1,2,3,4,5]];
 listComp :: Parser Exp
 listComp = liftA2 Compr expr (forQual >>= (return $ (many $ (forQual <|> ifQual))))
 
 ifQual :: Parser Qual
-ifQual = (string "if") *> (QIf <$> expr)
+ifQual = (keyword "if") *> (QIf <$> expr)
 
 forQual :: Parser Qual
-forQual = (string "for") *> (liftA2 QFor ident expr)
-
-stmt :: Parser Stmt
-stmt =  (liftA2 SDef ident (char '=' >> expr))
-        <|> 
-        (SExp <$> expr)
-program :: Parser Program
-program = stmt `sepBy1` (char ';')
-
+forQual = (keyword "for") *> (liftA2 QFor ident (keyword "in" *> expr))
 
 parseString :: String -> Either ParseError Program
-parseString s = undefined -- parse ex "WarmupParsec.hs" s
+parseString s = parse program "BoaParser" s
+
+-- Note about eof and semicollons shit
+program :: Parser Program
+program = stmt `sepBy1` (symbol ';')
+
+-- (liftA2 SDef ident (char '=' >> expr))
+
+stmt :: Parser Stmt
+stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
+        <|> 
+        (SExp <$> expr)
+
+expr :: Parser Exp
+expr  = (keyword "not") *> (Not <$> expr)
+        <|>
+        relExpr        
+
+keyword :: String -> Parser String
+keyword k = (lexeme $ (string k))
+
+symbol :: Char -> Parser Char
+symbol k = (lexeme $ (char k))
+
+-- TODO: remove the do notation in favor of sth better
+-- relExpr :: Parser Exp
+-- relExpr = addExpr
+--           <|>
+--           (do a <- addExpr
+--               oper <- relOp
+--               b <- addExpr
+--               return (oper a b))
+
+relExpr :: Parser Exp
+relExpr = (addExpr >>= relExpr')
+
+relExpr' :: Exp -> Parser Exp
+relExpr' e1 = (relOp >>= (\oper -> ((oper e1) <$> addExpr) >>= relExpr'))
+          <|> return e1
+
+-- RelExpr ::= AddExpr RelExpr'
+-- RelExpr' ::= e | RelOp AddExpr
+
+addExpr :: Parser Exp
+addExpr = multExpr
+          <|> 
+          (multExpr >>= addExpr')
+
+addExpr' :: Exp -> Parser Exp
+addExpr' e1 = (addOp >>= (\oper -> ((oper e1) <$> multExpr) >>= addExpr'))
+          <|> return e1
+
+
+multExpr :: Parser Exp
+multExpr = (term >>= multExpr')
+
+multExpr' :: Exp -> Parser Exp
+multExpr' e1 = (multOp >>= (\oper -> ((oper e1) <$> term) >>= multExpr'))
+           <|> return e1
+
+relOp :: Parser (Exp -> Exp -> Exp)
+relOp = lexeme $ (keyword "==" *> (return $ Oper Eq)
+                  <|>
+                  keyword "!=" *> (return $ (\a b -> Not (Oper Eq a b)))
+                  <|>
+                  keyword ">=" *> (return $ (\a b -> Not (Oper Less a b)))
+                  <|>
+                  keyword "<=" *> (return $ (\a b -> Not (Oper Greater a b)))
+                  <|>
+                  keyword ">" *>  (return $ Oper Greater)
+                  <|>
+                  keyword "<" *>  (return $ Oper Less)
+                  <|>
+                  keyword "in" *> (return $ Oper In)
+                  <|>
+                  keyword "not in" *> (return $ (\a b -> Not (Oper In a b))))
+
+addOp :: Parser (Exp -> Exp -> Exp)
+addOp = lexeme $ ( symbol '+' *> (return $ Oper Plus)
+                   <|>
+                   symbol '-' *> (return $ Oper Minus))
+
+multOp :: Parser (Exp -> Exp -> Exp)
+multOp = lexeme $ ( symbol '*' *> (return $ Oper Plus)
+                    <|>
+                    string "//" *> (return $ Oper Div)
+                    <|>
+                    symbol '%' *> (return $ Oper Mod))
+
+term :: Parser Exp
+term = (try $ List <$> (brackets exprz))
+       <|>
+       (brackets listComp)
+       <|>
+       (Const <$> StringVal <$> stringConst)
+       <|>
+       (Const <$> IntVal <$> numConst)
+       <|>
+       (parens expr)
+       <|>
+       (keyword "None" *> return (Const NoneVal))
+       <|>
+       (keyword "False" *> return (Const FalseVal))
+       <|>
+       (keyword "True" *> return (Const TrueVal))
+       <|>
+       (ident >>= identFun)
+
+identFun :: String -> Parser Exp
+identFun e1 = (Call e1 <$> (parens exprz))
+              <|>
+              (return $ Var e1)
+
+exprz :: Parser [Exp]
+exprz = expr `sepBy` (symbol ',')
+
+parens = between (symbol '(') (symbol ')')
+brackets = between (toString $ symbol '[') (toString $ symbol ']')
