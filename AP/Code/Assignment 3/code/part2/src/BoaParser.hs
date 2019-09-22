@@ -58,9 +58,6 @@ printEscaped = concat <$> (many $ ((toString (satisfy printableNoQBS)) --  print
                             <|>
                             (((char '\\') *> (char '\n') >> return "")))) -- need string because we can't return empty char
 
--- testString = ['\'', 'f', 'o', '\\', '\\', 'o', '\\', '\n', 'b', '\\', 'n', 'a', '\\', '\'', 'r', '\'']
-           
--- list = [x*x for x in [1,2,3,4,5]];
 listComp :: Parser Exp
 listComp = liftA2 Compr expr (forQual >>= (return $ (many $ (forQual <|> ifQual))))
 
@@ -76,8 +73,6 @@ parseString s = parse program "BoaParser" s
 -- Note about eof and semicollons shit
 program :: Parser Program
 program = stmt `sepBy1` (symbol ';')
-
--- (liftA2 SDef ident (char '=' >> expr))
 
 stmt :: Parser Stmt
 stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
@@ -95,24 +90,12 @@ keyword k = (lexeme $ (string k))
 symbol :: Char -> Parser Char
 symbol k = (lexeme $ (char k))
 
--- TODO: remove the do notation in favor of sth better
--- relExpr :: Parser Exp
--- relExpr = addExpr
---           <|>
---           (do a <- addExpr
---               oper <- relOp
---               b <- addExpr
---               return (oper a b))
-
 relExpr :: Parser Exp
 relExpr = (addExpr >>= relExpr')
 
 relExpr' :: Exp -> Parser Exp
-relExpr' e1 = (relOp >>= (\oper -> ((oper e1) <$> addExpr) >>= relExpr'))
+relExpr' e1 = try (relOp >>= (\oper -> ((oper e1) <$> addExpr) >>= relExpr'))
           <|> return e1
-
--- RelExpr ::= AddExpr RelExpr'
--- RelExpr' ::= e | RelOp AddExpr
 
 addExpr :: Parser Exp
 addExpr = multExpr
