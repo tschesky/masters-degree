@@ -11,13 +11,13 @@ import Control.Applicative (liftA2)
 -- type ParseError = Err.ParseError -- you may replace this
 -- definitions from the lecture
 whitespace :: Parser ()
-whitespace = do skipMany ( satisfy isSpace ); return ()
+whitespace = skipMany ( satisfy isSpace )
 
 whitespace1 :: Parser ()
-whitespace1 = do skipMany1 ( satisfy isSpace ); return ()
+whitespace1 = skipMany1 ( satisfy isSpace )
 
 lexeme :: Parser a -> Parser a 
-lexeme p = do a <- p ; whitespace ; return a
+lexeme p = p <* whitespace
 
 toString :: Parser Char -> Parser String
 toString c = (:[]) <$> c
@@ -28,10 +28,8 @@ lu = ((satisfy isAlpha) <|> char '_')
 ldu = (alphaNum <|> char '_')
 
 ident :: Parser String
-ident = lexeme $ do s <- lu
-                    r <- many $ ldu
-                    let id = (s:r)
-                    if (id `elem` reservedKeywords) then fail (id ++ " is a reserved keyword.") else return id
+ident = lexeme $ ((liftA2 (:) lu (many ldu)) >>= (\id -> if (id `elem` reservedKeywords) then fail (id ++ " is a reserved keyword.") else return id))
+                    
 
 numConst :: Parser Int
 numConst = lexeme $ (read <$> (:[]) <$> (char '0')
@@ -58,34 +56,29 @@ printEscaped = concat <$> (many $ ((toString (satisfy printableNoQBS)) --  print
                             <|>
                             (((char '\\') *> (char '\n') >> return "")))) -- need string because we can't return empty char
 
--- testString = ['\'', 'f', 'o', '\\', '\\', 'o', '\\', '\n', 'b', '\\', 'n', 'a', '\\', '\'', 'r', '\'']
-           
--- list = [x*x for x in [1,2,3,4,5]];
 listComp :: Parser Exp
-listComp = liftA2 Compr expr (forQual >>= (return $ (many $ (forQual <|> ifQual))))
+listComp = liftA2 Compr expr (liftA2 (:) (forQual) (many $ (forQual <|> ifQual)))  --( >>= (return $ (many $ (forQual <|> ifQual))))
 
 ifQual :: Parser Qual
 ifQual = (keyword "if") *> (QIf <$> expr)
 
 forQual :: Parser Qual
-forQual = (keyword "for") *> (liftA2 QFor ident (keyword "in" *> expr))
+forQual = (keyword "for") *> liftA2 QFor ident (keyword "in" *> expr)
 
 parseString :: String -> Either ParseError Program
 parseString s = parse program "BoaParser" s
 
 -- Note about eof and semicollons shit
 program :: Parser Program
-program = stmt `sepBy1` (symbol ';')
-
--- (liftA2 SDef ident (char '=' >> expr))
+program = (stmt `sepBy1` (symbol ';')) <* eof -- >>= (\ast -> eof >> (return ast))
 
 stmt :: Parser Stmt
 stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
         <|> 
-        (SExp <$> expr)
+        (try (SExp <$> expr))
 
 expr :: Parser Exp
-expr  = (keyword "not") *> (Not <$> expr)
+expr  = (try (keyword "not") *> (Not <$> expr))
         <|>
         relExpr        
 
@@ -95,24 +88,12 @@ keyword k = (lexeme $ (string k))
 symbol :: Char -> Parser Char
 symbol k = (lexeme $ (char k))
 
--- TODO: remove the do notation in favor of sth better
--- relExpr :: Parser Exp
--- relExpr = addExpr
---           <|>
---           (do a <- addExpr
---               oper <- relOp
---               b <- addExpr
---               return (oper a b))
-
 relExpr :: Parser Exp
 relExpr = (addExpr >>= relExpr')
 
 relExpr' :: Exp -> Parser Exp
-relExpr' e1 = (relOp >>= (\oper -> ((oper e1) <$> addExpr) >>= relExpr'))
+relExpr' e1 = try (relOp >>= (\oper -> ((oper e1) <$> addExpr) >>= relExpr'))
           <|> return e1
-
--- RelExpr ::= AddExpr RelExpr'
--- RelExpr' ::= e | RelOp AddExpr
 
 addExpr :: Parser Exp
 addExpr = multExpr
@@ -154,7 +135,7 @@ addOp = lexeme $ ( symbol '+' *> (return $ Oper Plus)
                    symbol '-' *> (return $ Oper Minus))
 
 multOp :: Parser (Exp -> Exp -> Exp)
-multOp = lexeme $ ( symbol '*' *> (return $ Oper Plus)
+multOp = lexeme $ ( symbol '*' *> (return $ Oper Times)
                     <|>
                     string "//" *> (return $ Oper Div)
                     <|>
@@ -171,11 +152,11 @@ term = (try $ List <$> (brackets exprz))
        <|>
        (parens expr)
        <|>
-       (keyword "None" *> return (Const NoneVal))
+       (try (keyword "None" *> return (Const NoneVal)))
        <|>
-       (keyword "False" *> return (Const FalseVal))
+       (try (keyword "False" *> return (Const FalseVal)))
        <|>
-       (keyword "True" *> return (Const TrueVal))
+       (try (keyword "True" *> return (Const TrueVal)))
        <|>
        (ident >>= identFun)
 
@@ -188,4 +169,4 @@ exprz :: Parser [Exp]
 exprz = expr `sepBy` (symbol ',')
 
 parens = between (symbol '(') (symbol ')')
-brackets = between (toString $ symbol '[') (toString $ symbol ']')
+brackets = between (symbol '[') (symbol ']')
