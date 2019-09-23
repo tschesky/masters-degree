@@ -42,7 +42,7 @@ numConst = lexeme $ (read <$> (:[]) <$> (char '0') -- abuse no backtracking! 3rd
                     read <$> many1 digit)
 
 stringConst :: Parser String
-stringConst = lexeme $ between (toString $ char '\'') (toString $ char '\'') printEscaped
+stringConst = lexeme $ (char '\'') *> (printEscaped) <* (char '\'') 
 
 
 printableNoQBS :: Char -> Bool
@@ -52,13 +52,13 @@ printableNoQBS c = (isPrint c) && (not $ c `elem` ['\\', '\''])
 printEscaped :: Parser String
 printEscaped = concat <$> (many $ ((toString (satisfy printableNoQBS)) --  printable chars without \ or '
                             <|>
-                            (try ((char '\\') *> (string "\'")))  -- \'
+                            (try ((char '\\') *> (string "'")))  -- \'
                             <|>
                             (try ((char '\\') *> (string "\\")))  -- \\
                             <|>
                             (try ((char '\\' *> (char 'n') *> return "\n")))   -- \n
                             <|>
-                            (((char '\\') *> (char '\n') >> return "")))) -- need string because we can't return empty char
+                            (((char '\\') *> (char '\n') *> return "")))) -- need string because we can't return empty char
 
 listComp :: Parser Exp
 listComp = liftA2 Compr expr (liftA2 (:) (forQual) (many $ (forQual <|> ifQual)))
@@ -70,11 +70,17 @@ forQual :: Parser Qual
 forQual = (singletonKeyword "for") *> liftA2 QFor ident (singletonKeyword "in" *> expr)
 
 parseString :: String -> Either ParseError Program
-parseString s = (parse commentPreprocessor "Preprocessor" s) >>= (parse program "BoaParser" )
+parseString s = (parse commentPreprocessor "Preprocessor" s) >>= (parse program "BoaParser" ) -- (\p -> Right $ [SExp $ Const $ StringVal p])
+
+validEscapes = try (string "\\\\") <|> try (string "\\n") <|> try (string "\\\n") <|> try (string "\\'")
 
 commentPreprocessor :: Parser String
-commentPreprocessor = many $ (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return ' ') 
-                                <|> anyChar)
+commentPreprocessor = (concat <$> (many $ (
+                                        (++ "'") <$> ("'"++) <$> ((char '\'') *> (concat <$> (many $ (toString $ satisfy $ printableNoQBS) <|> validEscapes)) <* (char '\'') ) 
+                                        <|>
+                                        (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return "\n"))
+                                        <|> 
+                                        ((:[]) <$> anyChar)))) <* eof
     
 -- Note about eof and semicollons shit
 program :: Parser Program
