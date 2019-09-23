@@ -40,6 +40,7 @@ numConst = lexeme $ (read <$> (:[]) <$> (char '0') -- abuse no backtracking! 3rd
                     ((char '-') >> (negate <$> numConst))
                     <|>
                     read <$> many1 digit)
+
 stringConst :: Parser String
 stringConst = lexeme $ between (toString $ char '\'') (toString $ char '\'') printEscaped
 
@@ -63,10 +64,10 @@ listComp :: Parser Exp
 listComp = liftA2 Compr expr (liftA2 (:) (forQual) (many $ (forQual <|> ifQual)))
 
 ifQual :: Parser Qual
-ifQual = (keyword "if") *> (QIf <$> expr)
+ifQual = (singletonKeyword "if") *> (QIf <$> expr)
 
 forQual :: Parser Qual
-forQual = (keyword "for") *> liftA2 QFor ident (keyword "in" *> expr)
+forQual = (singletonKeyword "for") *> liftA2 QFor ident (singletonKeyword "in" *> expr)
 
 parseString :: String -> Either ParseError Program
 parseString s = (parse commentPreprocessor "Preprocessor" s) >>= (parse program "BoaParser" )
@@ -85,7 +86,7 @@ stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
         (try (SExp <$> expr))
 
 expr :: Parser Exp
-expr  = (try (keyword "not") *> (Not <$> expr))
+expr  = (try (singletonKeyword "not") *> (Not <$> expr))
         <|>
         relExpr        
 
@@ -94,6 +95,9 @@ keyword k = (lexeme $ (string k))
 
 keyword1 :: String -> Parser String
 keyword1 k = (lexeme1 $ (string k))
+
+singletonKeyword :: String -> Parser String
+singletonKeyword s = (string s <* (notFollowedBy alphaNum) <* whitespace)
 
 symbol :: Char -> Parser Char
 symbol k = (lexeme $ (char k))
@@ -135,9 +139,9 @@ relOp = lexeme $ (keyword "==" *> (return $ Oper Eq)
                   <|>
                   keyword "<" *>  (return $ Oper Less)
                   <|>
-                  keyword "in" *> (return $ Oper In)
+                  (string "in" <* notFollowedBy alphaNum <* whitespace) *> (return $ Oper In)
                   <|>
-                  keyword1 "not" *> whitespace *> keyword "in" *> (return $ (\a b -> Not (Oper In a b))))
+                  keyword1 "not" *> keyword "in" *> (return $ (\a b -> Not (Oper In a b))))
 
 addOp :: Parser (Exp -> Exp -> Exp)
 addOp = lexeme $ ( symbol '+' *> (return $ Oper Plus)
