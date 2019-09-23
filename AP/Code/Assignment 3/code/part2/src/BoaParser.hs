@@ -19,6 +19,9 @@ whitespace1 = skipMany1 ( satisfy isSpace )
 lexeme :: Parser a -> Parser a 
 lexeme p = p <* whitespace
 
+lexeme1 :: Parser a -> Parser a 
+lexeme1 p = p <* whitespace1
+
 toString :: Parser Char -> Parser String
 toString c = (:[]) <$> c
 
@@ -70,7 +73,7 @@ parseString s = parse program "BoaParser" s
 
 -- Note about eof and semicollons shit
 program :: Parser Program
-program = (stmt `sepBy1` (symbol ';')) <* eof -- >>= (\ast -> eof >> (return ast))
+program = whitespace >> (stmt `sepBy1` (symbol ';')) <* eof -- >>= (\ast -> eof >> (return ast))
 
 stmt :: Parser Stmt
 stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
@@ -84,6 +87,9 @@ expr  = (try (keyword "not") *> (Not <$> expr))
 
 keyword :: String -> Parser String
 keyword k = (lexeme $ (string k))
+
+keyword1 :: String -> Parser String
+keyword1 k = (lexeme1 $ (string k))
 
 symbol :: Char -> Parser Char
 symbol k = (lexeme $ (char k))
@@ -127,7 +133,7 @@ relOp = lexeme $ (keyword "==" *> (return $ Oper Eq)
                   <|>
                   keyword "in" *> (return $ Oper In)
                   <|>
-                  keyword "not in" *> (return $ (\a b -> Not (Oper In a b))))
+                  keyword1 "not" *> whitespace *> keyword "in" *> (return $ (\a b -> Not (Oper In a b))))
 
 addOp :: Parser (Exp -> Exp -> Exp)
 addOp = lexeme $ ( symbol '+' *> (return $ Oper Plus)
