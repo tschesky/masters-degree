@@ -35,7 +35,7 @@ ident = lexeme $ ((liftA2 (:) lu (many ldu)) >>= (\id -> if (id `elem` reservedK
                     
 
 numConst :: Parser Int
-numConst = lexeme $ (read <$> (:[]) <$> (char '0')
+numConst = lexeme $ (read <$> (:[]) <$> (char '0') -- abuse no backtracking! 3rd case will not be used if leading 0 present
                     <|>
                     ((char '-') >> (negate <$> numConst))
                     <|>
@@ -60,7 +60,7 @@ printEscaped = concat <$> (many $ ((toString (satisfy printableNoQBS)) --  print
                             (((char '\\') *> (char '\n') >> return "")))) -- need string because we can't return empty char
 
 listComp :: Parser Exp
-listComp = liftA2 Compr expr (liftA2 (:) (forQual) (many $ (forQual <|> ifQual)))  --( >>= (return $ (many $ (forQual <|> ifQual))))
+listComp = liftA2 Compr expr (liftA2 (:) (forQual) (many $ (forQual <|> ifQual)))
 
 ifQual :: Parser Qual
 ifQual = (keyword "if") *> (QIf <$> expr)
@@ -69,11 +69,15 @@ forQual :: Parser Qual
 forQual = (keyword "for") *> liftA2 QFor ident (keyword "in" *> expr)
 
 parseString :: String -> Either ParseError Program
-parseString s = parse program "BoaParser" s
+parseString s = (parse commentPreprocessor "Preprocessor" s) >>= (parse program "BoaParser" )
 
+commentPreprocessor :: Parser String
+commentPreprocessor = many $ (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return ' ') 
+                                <|> anyChar)
+    
 -- Note about eof and semicollons shit
 program :: Parser Program
-program = whitespace >> (stmt `sepBy1` (symbol ';')) <* eof -- >>= (\ast -> eof >> (return ast))
+program = whitespace >> (stmt `sepBy1` (symbol ';')) <* eof
 
 stmt :: Parser Stmt
 stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
