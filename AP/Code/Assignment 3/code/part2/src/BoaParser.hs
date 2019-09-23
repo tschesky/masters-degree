@@ -16,11 +16,23 @@ whitespace = skipMany ( satisfy isSpace )
 whitespace1 :: Parser ()
 whitespace1 = skipMany1 ( satisfy isSpace )
 
+-- yeeeeah
+comment :: Parser ()
+comment = (skipMany1 (char '#')) <* (skipMany (char ' ' <|> alphaNum <|> char '#' <|> char '\'')) <* (skipMany1 newline <|> eof)
+
+comments :: Parser ()
+comments = skipMany1 comment
+
+commentOrWhitespace = whitespace <|> comment
+
 lexeme :: Parser a -> Parser a 
 lexeme p = p <* whitespace
 
 lexeme1 :: Parser a -> Parser a 
 lexeme1 p = p <* whitespace1
+
+lexemeC :: Parser a -> Parser a 
+lexemeC p = p <* whitespace <* optional comments <* whitespace
 
 toString :: Parser Char -> Parser String
 toString c = (:[]) <$> c
@@ -31,17 +43,17 @@ lu = ((satisfy isAlpha) <|> char '_')
 ldu = (alphaNum <|> char '_')
 
 ident :: Parser String
-ident = lexeme $ ((liftA2 (:) lu (many ldu)) >>= (\id -> if (id `elem` reservedKeywords) then fail (id ++ " is a reserved keyword.") else return id))
+ident = lexemeC $ ((liftA2 (:) lu (many ldu)) >>= (\id -> if (id `elem` reservedKeywords) then fail (id ++ " is a reserved keyword.") else return id))
                     
 
 numConst :: Parser Int
-numConst = lexeme $ (read <$> (:[]) <$> (char '0')
-                    <|>
-                    ((char '-') >> (negate <$> numConst))
-                    <|>
-                    read <$> many1 digit)
+numConst = lexemeC $ (read <$> (:[]) <$> (char '0')
+                     <|>
+                     ((char '-') >> (negate <$> numConst))
+                     <|>
+                     read <$> many1 digit)
 stringConst :: Parser String
-stringConst = lexeme $ between (toString $ char '\'') (toString $ char '\'') printEscaped
+stringConst = lexemeC $ between (toString $ char '\'') (toString $ char '\'') printEscaped
 
 
 printableNoQBS :: Char -> Bool
@@ -63,17 +75,17 @@ listComp :: Parser Exp
 listComp = liftA2 Compr expr (liftA2 (:) (forQual) (many $ (forQual <|> ifQual)))  --( >>= (return $ (many $ (forQual <|> ifQual))))
 
 ifQual :: Parser Qual
-ifQual = (keyword "if") *> (QIf <$> expr)
+ifQual = (singletonKeyword "if") *> (QIf <$> expr)
 
 forQual :: Parser Qual
-forQual = (keyword "for") *> liftA2 QFor ident (keyword "in" *> expr)
+forQual = (singletonKeyword "for") *> liftA2 QFor ident (singletonKeyword "in" *> expr)
 
 parseString :: String -> Either ParseError Program
 parseString s = parse program "BoaParser" s
 
 -- Note about eof and semicollons shit
 program :: Parser Program
-program = whitespace >> (stmt `sepBy1` (symbol ';')) <* eof -- >>= (\ast -> eof >> (return ast))
+program = (comments <|> whitespace) *> (stmt `sepBy1` (symbol ';')) <* eof -- >>= (\ast -> eof >> (return ast))
 
 stmt :: Parser Stmt
 stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
@@ -81,18 +93,24 @@ stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
         (try (SExp <$> expr))
 
 expr :: Parser Exp
-expr  = (try (keyword "not") *> (Not <$> expr))
+expr  = (try (singletonKeyword "not") *> (Not <$> expr))
         <|>
         relExpr        
 
+-- notLetter = noneOf (['a'..'z']  ++ ['A'..'Z'])
+-- <* optional(many notLetter) <* whitespace
+
 keyword :: String -> Parser String
-keyword k = (lexeme $ (string k))
+keyword k = (lexemeC $ (string k))
 
 keyword1 :: String -> Parser String
 keyword1 k = (lexeme1 $ (string k))
 
+singletonKeyword :: String -> Parser String
+singletonKeyword s = (string s <* (notFollowedBy alphaNum) <* whitespace <* optional comment <* whitespace)
+
 symbol :: Char -> Parser Char
-symbol k = (lexeme $ (char k))
+symbol k = (lexemeC $ (char k))
 
 relExpr :: Parser Exp
 relExpr = (addExpr >>= relExpr')
@@ -119,7 +137,7 @@ multExpr' e1 = (multOp >>= (\oper -> ((oper e1) <$> term) >>= multExpr'))
            <|> return e1
 
 relOp :: Parser (Exp -> Exp -> Exp)
-relOp = lexeme $ (keyword "==" *> (return $ Oper Eq)
+relOp = lexemeC $ (keyword "==" *> (return $ Oper Eq)
                   <|>
                   keyword "!=" *> (return $ (\a b -> Not (Oper Eq a b)))
                   <|>
@@ -131,17 +149,17 @@ relOp = lexeme $ (keyword "==" *> (return $ Oper Eq)
                   <|>
                   keyword "<" *>  (return $ Oper Less)
                   <|>
-                  keyword "in" *> (return $ Oper In)
+                  (string "in" <* notFollowedBy alphaNum <* whitespace) *> (return $ Oper In)
                   <|>
-                  keyword1 "not" *> whitespace *> keyword "in" *> (return $ (\a b -> Not (Oper In a b))))
+                  keyword1 "not" *> keyword "in" *> (return $ (\a b -> Not (Oper In a b))))
 
 addOp :: Parser (Exp -> Exp -> Exp)
-addOp = lexeme $ ( symbol '+' *> (return $ Oper Plus)
+addOp = lexemeC $ ( symbol '+' *> (return $ Oper Plus)
                    <|>
                    symbol '-' *> (return $ Oper Minus))
 
 multOp :: Parser (Exp -> Exp -> Exp)
-multOp = lexeme $ ( symbol '*' *> (return $ Oper Times)
+multOp = lexemeC $ ( symbol '*' *> (return $ Oper Times)
                     <|>
                     string "//" *> (return $ Oper Div)
                     <|>
