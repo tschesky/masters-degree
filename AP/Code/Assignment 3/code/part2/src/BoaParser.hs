@@ -106,13 +106,12 @@ relExpr :: Parser Exp
 relExpr = (addExpr >>= relExpr')
 
 relExpr' :: Exp -> Parser Exp
-relExpr' e1 = try (relOp >>= (\oper -> ((oper e1) <$> addExpr) >>= relExpr'))
+relExpr' e1 = try (relOp >>= (\oper -> ((oper e1) <$> addExpr) >>= addExpr'))
           <|> return e1
 
 addExpr :: Parser Exp
-addExpr = multExpr
-          <|> 
-          (multExpr >>= addExpr')
+addExpr = (multExpr >>= addExpr')
+      <|> multExpr
 
 addExpr' :: Exp -> Parser Exp
 addExpr' e1 = (addOp >>= (\oper -> ((oper e1) <$> multExpr) >>= addExpr'))
@@ -131,9 +130,9 @@ relOp = lexeme $ (keyword "==" *> (return $ Oper Eq)
                   <|>
                   keyword "!=" *> (return $ (\a b -> Not (Oper Eq a b)))
                   <|>
-                  keyword ">=" *> (return $ (\a b -> Not (Oper Less a b)))
+                  try( keyword ">=" *> (return $ (\a b -> Not (Oper Less a b))))
                   <|>
-                  keyword "<=" *> (return $ (\a b -> Not (Oper Greater a b)))
+                  try( keyword "<=" *> (return $ (\a b -> Not (Oper Greater a b))))
                   <|>
                   keyword ">" *>  (return $ Oper Greater)
                   <|>
@@ -166,11 +165,11 @@ term = (try $ List <$> (brackets exprz))
        <|>
        (parens expr)
        <|>
-       (try (keyword "None" *> return (Const NoneVal)))
+       (try (singletonKeyword "None" *> return (Const NoneVal)))
        <|>
-       (try (keyword "False" *> return (Const FalseVal)))
+       (try (singletonKeyword "False" *> return (Const FalseVal)))
        <|>
-       (try (keyword "True" *> return (Const TrueVal)))
+       (try (singletonKeyword "True" *> return (Const TrueVal)))
        <|>
        (ident >>= identFun)
 
