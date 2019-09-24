@@ -8,7 +8,7 @@ module WarmupParsec where
 --   tokens may be separated by arbtrary whitespace (spaces, tabs, newlines).
 
 -- Rewritten grammar, without left-recursion:
--- E ::= T E' | "-" T
+-- E ::= T E' | "-" T | "-" T E' 
 -- E'::= e | "+" T E' | "-" T E'
 -- T ::= num | "(" E ")"
 
