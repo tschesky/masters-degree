@@ -8,6 +8,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Test.Tasty.QuickCheck as QC
 import Text.ParserCombinators.Parsec
+import Data.Char
+import Control.Applicative (liftA2)
 
 main :: IO ()
 main = defaultMain $ localOption (mkTimeout 1000000) tests
@@ -18,12 +20,13 @@ tests = testGroup "All tests" [minimalTests, propertyTst]
 propertyTst :: TestTree
 propertyTst = testGroup "Property tests" [prop_encode_decode]
 
--- Operate on operator In should always retun the same value as elem function from Haskell
 prop_encode_decode = testGroup "Test encode-decode"
                 [ QC.testProperty "Test encode-decode" $
                     (\s -> let string = printStatement s in
-                                 let exp = parseString string in
-                                   s == exp)
+                                 case parseString string of
+                                  (Right (exp:_)) -> s QC.=== exp
+                                  _ -> QC.property QC.Discard
+                    )
                 ]
 
 minimalTests :: TestTree
@@ -45,6 +48,21 @@ instance QC.Arbitrary ListValue where
 -- list
 instance QC.Arbitrary Value where
     arbitrary = sizedVal
+
+-- identifier
+newtype Identifier = Ident String deriving (Eq, Show)
+instance QC.Arbitrary Identifier where
+  arbitrary = Ident <$> (liftA2 (:) (QC.arbitrary `QC.suchThat` lu) (QC.listOf (QC.arbitrary `QC.suchThat` ldu)))
+
+lu c = isAlpha c || (c == '_')
+ldu c = (isAlpha c || (c == '_'))
+printableNoQBS c = (isPrint c) && (not $ c `elem` ['\\', '\''])
+
+newtype StringConst = SC String deriving (Eq, Show)
+instance QC.Arbitrary StringConst where
+  arbitrary = SC <$> concat <$> QC.listOf validTokens
+
+validTokens = liftA2 (:) ((QC.arbitrary `QC.suchThat` printableNoQBS)) (QC.elements (["\\\\","\\\'","\\n","\\\n"]))
 
 sizedVal = QC.sized valN
 
@@ -72,39 +90,51 @@ listVal n = do res <- subVal
 -- expressions
 instance QC.Arbitrary Exp where
   arbitrary = sizedExp
+-- newtype TestExp = TExp Exp deriving (Show)
+-- instance Eq TestExp where
+--   (==) (TExp (List [])) (TExp (Const (ListVal []))) = True
+--   (==) (TExp (Const (ListVal []))) (TExp (List []) = True
+-- instance EQ ListVal where
+--   (List []) == (Const $ ListVal []) = True
+--   (Const $ ListVal []) == (List []) = True
+  
 
 sizedExp = QC.sized expN
 
 expN 0 = QC.oneof $ [ liftM Const QC.arbitrary,
-                      liftM Var QC.arbitrary,
+                      (do (Ident name) <- QC.arbitrary
+                          return $ Var name),
                       liftM Not QC.arbitrary,
                       return (List []),
                       (do o <- QC.arbitrary
                           e1 <- QC.arbitrary
                           e2 <- QC.arbitrary
                           return $ Oper o (Const e1) (Const e2)),
-                      (do name <- QC.arbitrary
-                          return $ Call name []),
-                      (do e <- QC.arbitrary
-                          return $ Compr (Const e) [])]
+                      (do (Ident name) <- QC.arbitrary
+                          e <- QC.arbitrary
+                          return $ Call name [e]),
+                      (do e1 <- QC.arbitrary
+                          e2 <- QC.arbitrary
+                          (Ident name) <- QC.arbitrary
+                          return $ Compr e1 [(QFor name e2)])]
 
 expN n = QC.oneof $ [ liftM Const QC.arbitrary,
-                      liftM Var QC.arbitrary,
+                      (do (Ident name) <- QC.arbitrary
+                          return $ Var name),
                       liftM Not QC.arbitrary,
                       return (List []),
                       (do o <- QC.arbitrary
-                          e1 <- subExp
-                          e2 <- subExp
+                          e1 <- QC.arbitrary
+                          e2 <- QC.arbitrary
                           return $ Oper o e1 e2),
-                      (do name <- QC.arbitrary
-                          rest <- subExp
+                      (do (Ident name) <- QC.arbitrary
+                          rest <- QC.arbitrary
                           return $ Call name [rest]),
-                      (do e <- QC.arbitrary
-                          quals <- subQual
-                          return $ Compr (Const e) [quals])]
-                  where subExp = (expN (n `div` 2))
-                        subQual = (quals (n `div` 2))
-
+                      (do e1 <- QC.arbitrary
+                          e2 <- QC.arbitrary
+                          (Ident name) <- QC.arbitrary
+                          quals <- QC.arbitrary
+                          return $ Compr e1 ((QFor name e2):[quals]))]
 -- operators
 instance QC.Arbitrary Op where
   arbitrary = ops
@@ -117,24 +147,23 @@ instance QC.Arbitrary Qual where
 
 sizedQuals = QC.sized quals 
 
-quals 0 = QC.oneof $ [(do name <- QC.arbitrary
+quals 0 = QC.oneof $ [(do (Ident name) <- QC.arbitrary
                           e <- QC.arbitrary
                           return $ QFor name (Const e)),
                       (do e <- QC.arbitrary
                           return $ QIf (Const e))]
 
-quals n = QC.oneof $ [(do name <- QC.arbitrary
-                          e <- subExp
+quals n = QC.oneof $ [(do (Ident name) <- QC.arbitrary
+                          e <- QC.arbitrary
                           return $ QFor name e),
-                      (do e <- subExp
+                      (do e <- QC.arbitrary
                           return $ QIf e)]
-                    where subExp = (expN (n `div` 2))
 
 -- Statements
 instance QC.Arbitrary Stmt where
   arbitrary = statements
 
-statements =  QC.oneof $ [(do name <- QC.arbitrary
+statements =  QC.oneof $ [(do (Ident name) <- QC.arbitrary
                               exp <- QC.arbitrary
                               return $ SDef name exp),
                           (do exp <- QC.arbitrary
@@ -143,9 +172,9 @@ statements =  QC.oneof $ [(do name <- QC.arbitrary
 
 ------ Printing stuff -------
 printVal :: Value -> String
-printVal NoneVal = "None"
-printVal TrueVal = "True"
-printVal FalseVal = "False"
+printVal NoneVal = "None "
+printVal TrueVal = "True "
+printVal FalseVal = "False "
 printVal (IntVal x) = show x
 printVal (StringVal x) = x
 printVal (ListVal x) = "[" ++ (print' x True) ++ "]"
@@ -180,7 +209,7 @@ printOperator Mod = "%"
 printOperator Eq = "=="
 printOperator Less = "<"
 printOperator Greater = ">"
-printOperator In = "in"
+printOperator In = "in "
 
 parens :: Exp -> String
 parens e = "(" ++ (printExpression e)  ++ ")"
@@ -189,7 +218,7 @@ parens' :: String -> String
 parens' e = "(" ++ e  ++ ")"
 
 brackets :: String -> String
-brackets e = "[" ++ show e ++ "]"
+brackets e = "[" ++ e ++ "]"
 
 printExpression :: Exp -> String
 printExpression (Const val) = printVal val
@@ -205,5 +234,8 @@ printQualifier (QFor name exp) = "for " ++ name ++ (parens exp)
 printQualifier (QIf exp) = "in " ++ (parens exp)
 
 printStatement :: Stmt -> String
-printStatement (SDef name exp) = name ++ (printExpression exp)
+printStatement (SDef name exp) = name ++ "=" ++ (printExpression exp)
 printStatement (SExp exp) = (printExpression exp)
+
+-- printProgram :: Program -> String
+-- printProgram (s:p) = (printStatement s) ++ ";" ++ (printProgram p)
