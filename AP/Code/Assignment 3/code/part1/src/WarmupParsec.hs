@@ -20,25 +20,39 @@ data Exp = Num Int | Negate Exp | Add Exp Exp
 ex :: Parser Exp 
 ex = (term >>= ex')
      <|> 
-     (char '-' >> Negate <$> term)
+     (try (symbol '-' >> Negate <$> term) >>= ex')
+     <|>
+     (try (symbol '-' >> Negate <$> term))
 
 ex' :: Exp -> Parser Exp
 -- (char '+' >> Add e1 <$> term >>= expr')
-ex' t1 = ((char '+') >> (Add t1 <$> term) >>= ex')
+ex' t1 = ((symbol '+') >> (Add t1 <$> term) >>= ex')
           <|> 
-          ((char '-') >> (Add t1 <$> Negate <$> term) >>= ex')
+          ((symbol '-') >> (Add t1 <$> Negate <$> term) >>= ex')
           <|> 
           return t1
 
 term :: Parser Exp
 term = Num <$> num
        <|>
-       between (char '(') (char ')') ex 
+       between (symbol '(') (symbol ')') ex 
       
 
 num :: Parser Int
-num = read <$> many1 (satisfy isDigit)
+num = lexeme $ (read <$> many1 (satisfy isDigit))
 
 -- Optional: if not attempted, leave as undefined
 parseString :: String -> Either ParseError Exp
-parseString s = parse ex "WarmupParsec.hs" s
+parseString s = parse simpleArith "WarmupParsec.hs" s
+
+whitespace :: Parser ()
+whitespace = skipMany ( satisfy isSpace )
+
+lexeme :: Parser a -> Parser a 
+lexeme p = p <* whitespace
+
+symbol :: Char -> Parser Char
+symbol k = (lexeme $ (char k))
+
+simpleArith :: Parser Exp
+simpleArith = whitespace *> ex <* eof
