@@ -37,7 +37,7 @@ ident = lexeme $ ((liftA2 (:) lu (many ldu)) >>= (\id -> if (id `elem` reservedK
 numConst :: Parser Int
 numConst = lexeme $ (read <$> (:[]) <$> (char '0') -- abuse no backtracking! 3rd case will not be used if leading 0 present
                     <|>
-                    ((char '-') >> (negate <$> numConst))
+                    ((char '-') *> (negate <$> numConst))
                     <|>
                     read <$> many1 digit)
 
@@ -73,7 +73,7 @@ parseString :: String -> Either ParseError Program
 parseString s = (parse program "BoaParser" s) -- (\p -> Right $ [SExp $ Const $ StringVal p])
 
 program :: Parser Program
-program = whitespace >> (stmt `sepBy1` (symbol ';')) <* eof
+program = whitespace *> (stmt `sepBy1` (symbol ';')) <* eof
 
 stmt :: Parser Stmt
 stmt =  (try (liftA2 SDef ident (symbol '=' >> expr)))
