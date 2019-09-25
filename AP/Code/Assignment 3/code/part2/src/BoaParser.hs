@@ -11,10 +11,10 @@ import Control.Applicative (liftA2)
 -- type ParseError = Err.ParseError -- you may replace this
 -- definitions from the lecture
 whitespace :: Parser ()
-whitespace = skipMany ( ((satisfy isSpace) *> return "") <|> (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return "\n"))) 
+whitespace = skipMany ( ((satisfy isSpace) *> return "") <|> (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return " "))) 
 
 whitespace1 :: Parser ()
-whitespace1 = skipMany1 (((satisfy isSpace) *> return "") <|> (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return "\n")))
+whitespace1 = skipMany1 (((satisfy isSpace) *> return "") <|> (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return " ")))
 
 lexeme :: Parser a -> Parser a 
 lexeme p = p <* whitespace
@@ -133,7 +133,7 @@ relOp = lexeme $ (keyword "==" *> (return $ Oper Eq)
                   <|>
                   keyword "<" *>  (return $ Oper Less)
                   <|>
-                  (try (keyword "in" <* notFollowedBy alphaNum <* whitespace) *> (return $ Oper In))
+                  (string "in" <* notFollowedBy alphaNum <* whitespace) *> (return $ Oper In)
                   <|>
                   (try (keyword1 "not" *> keyword "in" *> (return $ (\a b -> Not (Oper In a b))))))
 
