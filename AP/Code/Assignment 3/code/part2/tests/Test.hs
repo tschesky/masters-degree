@@ -20,13 +20,21 @@ propertyTst :: TestTree
 propertyTst = testGroup "Property tests" [prop_encode_decode]
 
 prop_encode_decode = testGroup "Test encode-decode"
-                [ QC.testProperty "Test encode-decode" $
+                [ QC.testProperty "Test encode-decode" $ (QC.withMaxSuccess 200
                     (\s -> let string = printStatement s in
                                  case parseString string of
                                   (Right (stmt:[])) ->  stmt QC.=== s
                                   a -> (Right []) QC.=== a
-
-                    )
+                    )),
+                  QC.testProperty "Test encode-decode on whole program" $ (QC.withMaxSuccess 25
+                    (\p -> let string = printProgram p in
+                                case string of 
+                                  "[]" -> 1 QC.=== 1
+                                  "" -> 1 QC.=== 1
+                                  s -> case parseString s of
+                                        (Right stmts) ->  stmts QC.=== p
+                                        a -> (Right []) QC.=== a
+                    ))
                 ]
 
 minimalTests :: TestTree
@@ -43,11 +51,13 @@ minimalTests = testGroup "Minimal tests" [
 -- identifier
 newtype Identifier = Ident String deriving (Eq, Show)
 instance QC.Arbitrary Identifier where
-  arbitrary = Ident <$> (liftA2 (:) (QC.arbitrary `QC.suchThat` lu) (QC.listOf (QC.arbitrary `QC.suchThat` ldu)))
+  arbitrary = Ident <$> (take 25) <$> (liftA2 (:) (QC.arbitrary `QC.suchThat` lu) (QC.listOf (QC.arbitrary `QC.suchThat` ldu))) `QC.suchThat` notKeyword
 
 lu c = isAlpha c || (c == '_')
 ldu c = (isAlpha c || (c == '_'))
 printableNoQBS c = (isPrint c) && (not $ c `elem` ['\\', '\''])
+notKeyword s = not $ s `elem` reservedKeywords
+reservedKeywords = ["None", "True", "False", "for", "if", "in", "not"]
 
 newtype StringConst = SC String deriving (Eq, Show)
 instance QC.Arbitrary StringConst where
@@ -64,8 +74,8 @@ val =  QC.oneof $ [ return NoneVal,
                 return TrueVal,
                 return FalseVal,
                 liftM IntVal QC.arbitrary,
-                do (SC s) <- QC.arbitrary
-                   return $ StringVal s
+                do (SC s) <- QC.arbitrary 
+                   return $ StringVal (take 25 s)
             ]
 
 -- expressions
@@ -120,9 +130,6 @@ ops = QC.elements $ [Plus, Minus, Times, Div, Mod, Eq, Less, Greater, In]
 newtype Quals = Quals [Qual] deriving (Eq, Show)
 instance QC.Arbitrary Quals where
   arbitrary = QC.sized quals 
--- qualifiers
--- instance QC.Arbitrary Qual where
---   arbitrary = sizedQuals
 
 quals 0 = QC.oneof $ [(do (Ident name) <- QC.arbitrary
                           v <- QC.arbitrary
@@ -138,7 +145,7 @@ quals n = QC.oneof $ [(do (Ident name) <- QC.arbitrary
                           (Quals qs) <- subQuals
                           return $ Quals $ ((QIf e):qs)) ]
                       where subQuals = quals (n `div` 2)
-                            subExp = expN (n `div` 2)
+                            subExp = expN (n `div` 4)
 -- Statements
 instance QC.Arbitrary Stmt where
   arbitrary = statements
@@ -149,6 +156,12 @@ statements =  QC.oneof $ [(do (Ident name) <- QC.arbitrary
                           (do exp <- QC.arbitrary
                               return $ SExp exp)]
 
+-- newtype Statements = Statements [Stmt] deriving (Eq, Show)
+-- instance QC.Arbitrary  where
+--   arbitrary = QC.listOf statements
+
+-- smallNumber :: QC.Gen Int
+-- smallNumber = fmap ((`mod` 100) . abs) QC.arbitrary
 
 ------ Printing stuff -------
 printVal :: Value -> String
@@ -188,6 +201,13 @@ print''' (x:xs) il
     | xs == [] = (printQualifier x)
     | otherwise = (if il then (printQualifier x) ++ " " else (printQualifier x) ++ " ") ++ (print''' xs il)
 
+-- Bool indicates if value is in list
+print'''' :: [Stmt] -> Bool -> String
+print'''' [] _ = ""
+print'''' (x:xs) il
+    | xs == [] = (printStatement x)
+    | otherwise = (if il then (printStatement x) ++ ";" else (printStatement x) ++ ";") ++ (print'''' xs il)
+
 printOperator :: Op -> String
 printOperator Plus = "+"
 printOperator Minus = "-"
@@ -224,3 +244,6 @@ printQualifier (QIf exp) = "if " ++ (parens exp)
 printStatement :: Stmt -> String
 printStatement (SDef name exp) = name ++ "=" ++ (printExpression exp)
 printStatement (SExp exp) = (printExpression exp)
+
+printProgram :: Program -> String
+printProgram p = print'''' p True
