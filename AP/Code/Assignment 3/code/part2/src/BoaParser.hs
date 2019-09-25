@@ -11,10 +11,10 @@ import Control.Applicative (liftA2)
 -- type ParseError = Err.ParseError -- you may replace this
 -- definitions from the lecture
 whitespace :: Parser ()
-whitespace = skipMany ( satisfy isSpace )
+whitespace = skipMany ( ((satisfy isSpace) *> return "") <|> (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return " "))) 
 
 whitespace1 :: Parser ()
-whitespace1 = skipMany1 ( satisfy isSpace )
+whitespace1 = skipMany1 (((satisfy isSpace) *> return "") <|> (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return " ")))
 
 lexeme :: Parser a -> Parser a 
 lexeme p = p <* whitespace
@@ -70,19 +70,8 @@ forQual :: Parser Qual
 forQual = (singletonKeyword "for") *> liftA2 QFor ident (singletonKeyword "in" *> expr)
 
 parseString :: String -> Either ParseError Program
-parseString s = (parse commentPreprocessor "Preprocessor" s) >>= (parse program "BoaParser" ) -- (\p -> Right $ [SExp $ Const $ StringVal p])
+parseString s = (parse program "BoaParser" s) -- (\p -> Right $ [SExp $ Const $ StringVal p])
 
-validEscapes = try (string "\\\\") <|> try (string "\\n") <|> try (string "\\\n") <|> try (string "\\'")
-
-commentPreprocessor :: Parser String
-commentPreprocessor = (concat <$> (many $ (
-                                        (++ "'") <$> ("'"++) <$> ((char '\'') *> (concat <$> (many $ (toString $ satisfy $ printableNoQBS) <|> validEscapes)) <* (char '\'') ) 
-                                        <|>
-                                        (((char '#') *> skipMany (noneOf "\n") *> (skipMany1 newline <|> eof) *> return "\n"))
-                                        <|> 
-                                        ((:[]) <$> anyChar)))) <* eof
-    
--- Note about eof and semicollons shit
 program :: Parser Program
 program = whitespace >> (stmt `sepBy1` (symbol ';')) <* eof
 
@@ -146,7 +135,7 @@ relOp = lexeme $ (keyword "==" *> (return $ Oper Eq)
                   <|>
                   (string "in" <* notFollowedBy alphaNum <* whitespace) *> (return $ Oper In)
                   <|>
-                  keyword1 "not" *> keyword "in" *> (return $ (\a b -> Not (Oper In a b))))
+                  (try (keyword1 "not" *> keyword "in" *> (return $ (\a b -> Not (Oper In a b))))))
 
 addOp :: Parser (Exp -> Exp -> Exp)
 addOp = lexeme $ ( symbol '+' *> (return $ Oper Plus)
