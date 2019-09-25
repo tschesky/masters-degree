@@ -29,13 +29,6 @@ prop_encode_decode = testGroup "Test encode-decode"
                     )
                 ]
 
--- compareStatements :: Stmt -> Stmt -> QC.Property
--- compareStatements (SExp e1) (SExp e2) = (TExp e1) QC.=== (TExp e2) 
--- compareStatements (SDef n1 e1) (SDef n2 e2) = if (n1 == n2) then (TExp e1) QC.=== (TExp e2) else QC.property $ QC.Discard
--- compareStatements _ _ = QC.property $ QC.Discard
-
-
-
 minimalTests :: TestTree
 minimalTests = testGroup "Minimal tests" [
   testCase "simple success" $
@@ -231,6 +224,3 @@ printQualifier (QIf exp) = "if " ++ (parens exp)
 printStatement :: Stmt -> String
 printStatement (SDef name exp) = name ++ "=" ++ (printExpression exp)
 printStatement (SExp exp) = (printExpression exp)
-
--- printProgram :: Program -> String
--- printProgram (s:p) = (printStatement s) ++ ";" ++ (printProgram p)
