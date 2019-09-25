@@ -156,13 +156,6 @@ statements =  QC.oneof $ [(do (Ident name) <- QC.arbitrary
                           (do exp <- QC.arbitrary
                               return $ SExp exp)]
 
--- newtype Statements = Statements [Stmt] deriving (Eq, Show)
--- instance QC.Arbitrary  where
---   arbitrary = QC.listOf statements
-
--- smallNumber :: QC.Gen Int
--- smallNumber = fmap ((`mod` 100) . abs) QC.arbitrary
-
 ------ Printing stuff -------
 printVal :: Value -> String
 printVal NoneVal = "None "
@@ -170,7 +163,7 @@ printVal TrueVal = "True "
 printVal FalseVal = "False "
 printVal (IntVal x) = show x
 printVal (StringVal x) = "'" ++ (escapeStringVal x) ++ "'"
-printVal (ListVal x) = "[" ++ (print' x True) ++ "]"
+printVal (ListVal x) = "[" ++ (printValueL x True) ++ "]"
 
 
 escapeStringVal :: String -> String
@@ -180,33 +173,16 @@ escapeStringVal (('\\'):rest) = "\\\\" ++ (escapeStringVal rest)
 escapeStringVal (('\n'):rest) = "\\n" ++ (escapeStringVal rest)
 escapeStringVal (a:rest) = a : (escapeStringVal rest)
 
--- Bool indicates if value is in list
-print' :: [Value] -> Bool -> String
-print' [] _ = ""
-print' (x:xs) il
-  | xs == [] = (printVal x)
-  | otherwise = (if il then (printVal x) ++ ", " else (printVal x) ++ " ") ++ (print' xs il)
+printx :: Eq a => (a -> String) -> String -> [a] -> Bool -> String
+printx _ _ [] _ = ""
+printx f sep (x:xs) il 
+  | xs == [] = (f x)
+  | otherwise = (if il then (f x) ++ sep else (f x) ++ " ") ++ (printx f sep xs il)
 
--- Bool indicates if value is in list
-print'' :: [Exp] -> Bool -> String
-print'' [] _ = ""
-print'' (x:xs) il
-   | xs == [] = (printExpression x)
-   | otherwise = (if il then (printExpression x) ++ ", " else (printExpression x) ++ " ") ++ (print'' xs il)
-
--- Bool indicates if value is in list
-print''' :: [Qual] -> Bool -> String
-print''' [] _ = ""
-print''' (x:xs) il
-    | xs == [] = (printQualifier x)
-    | otherwise = (if il then (printQualifier x) ++ " " else (printQualifier x) ++ " ") ++ (print''' xs il)
-
--- Bool indicates if value is in list
-print'''' :: [Stmt] -> Bool -> String
-print'''' [] _ = ""
-print'''' (x:xs) il
-    | xs == [] = (printStatement x)
-    | otherwise = (if il then (printStatement x) ++ ";" else (printStatement x) ++ ";") ++ (print'''' xs il)
+printValueL = printx printVal ", "
+printL = printx printExpression ", "
+printQualL = printx printQualifier " "
+printExpL = printx printStatement ";"
 
 printOperator :: Op -> String
 printOperator Plus = "+"
@@ -233,9 +209,9 @@ printExpression (Const val) = printVal val
 printExpression (Var name) = name
 printExpression (Oper op e1 e2) = (parens e1) ++ (printOperator op) ++ (parens e2)
 printExpression (Not e1) = "not " ++ (parens e1)
-printExpression (Call name args) = name ++ (parens' (print'' args True))
-printExpression (List elems) = (brackets (print'' elems True))
-printExpression (Compr exp quals) = "[" ++ (parens exp) ++ (print''' quals True) ++ "]"
+printExpression (Call name args) = name ++ (parens' (printL args True))
+printExpression (List elems) = (brackets (printL elems True))
+printExpression (Compr exp quals) = "[" ++ (parens exp) ++ (printQualL quals True) ++ "]"
 
 printQualifier :: Qual -> String
 printQualifier (QFor name exp) = "for " ++ name ++ " in " ++(parens exp)
@@ -246,4 +222,4 @@ printStatement (SDef name exp) = name ++ "=" ++ (printExpression exp)
 printStatement (SExp exp) = (printExpression exp)
 
 printProgram :: Program -> String
-printProgram p = print'''' p True
+printProgram p = printExpL p True
