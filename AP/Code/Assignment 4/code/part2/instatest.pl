@@ -26,4 +26,16 @@ test(follows2, [fail]) :-
 test(follows3, [set(X == [barry,clark,oliver])]) :-
     g1(G), follows(G, X, kara).
 
+test(ignores1, [nondet]) :-
+    g1(G), ignores(G, clark, bruce).
+
+test(ignores2, [fail]) :-
+    g1(G), ignores(G, bruce, bruce).
+
+test(ignores3, [set(X == [bruce,barry,clark])]) :-
+    g1(G), ignores(G, oliver, X).
+
+test(ignores4, [set(X == [clark, oliver])]) :-
+    g1(G), ignores(G, X, bruce).
+
 :- end_tests(instahub).
