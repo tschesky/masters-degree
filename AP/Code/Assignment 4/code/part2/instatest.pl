@@ -9,6 +9,12 @@ g1([person(kara, [barry, clark]),
     person(clark, [oliver, kara]),
     person(oliver, [kara])]).
 
+g1_popular([person(kara, [barry, clark, oliver]),
+            person(bruce,[clark, oliver]),
+            person(barry, [kara, oliver]),
+            person(clark, [oliver, kara]),
+            person(oliver, [kara, barry])]).
+
 g2([person(batman, [green_arrow, superman]),
     person(green_arrow, [supergirl]),
     person(supergirl, [flash, superman]),
@@ -37,5 +43,26 @@ test(ignores3, [set(X == [bruce,barry,clark])]) :-
 
 test(ignores4, [set(X == [clark, oliver])]) :-
     g1(G), ignores(G, X, bruce).
+
+test(popular1, [nondet]) :-
+    g1(G), popular(G, kara).
+
+test(popular2, [nondet]) :-
+    g1_popular(G), popular(G, kara).
+
+test(popular3, [nondet]) :-
+    g1_popular(G), popular(G, oliver).
+
+test(popular4, [fail]) :-
+    g1_popular(G), popular(G, bruce).
+
+test(popular5, [set(X == [kara, barry, oliver])]) :-
+    g1_popular(G), popular(G, X).
+
+test(outcast1, [nondet]) :-
+    g1(G), outcast(G, bruce).
+
+test(outcast2, [fail]) :-
+    g1(G), outcast(G, clark).
 
 :- end_tests(instahub).

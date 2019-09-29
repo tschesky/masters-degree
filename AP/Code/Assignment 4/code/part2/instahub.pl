@@ -21,9 +21,13 @@ different([person(PERSON2, _) | REST], PERSON1, PERSON2) :- inList(person(PERSON
 different([_ | REST], PERSON1, PERSON2) :- different(REST, PERSON1, PERSON2).                 % Just traverse the graph
 
 
+allDifferent(_, _, []).
+allDifferent(G, PERSON1, [PERSON2 | REST]) :- different(G, PERSON1, PERSON2),
+											  allDifferent(G, PERSON1, REST).
+
 %doesNotFollow(G, X, Y)
-doesNotFollow(G, FOLLOWER, FOLLOWED) :- follows(G, FOLLOWER, TMP),
-										different(G, TMP, FOLLOWED).
+doesNotFollow(G, FOLLOWER, NOT_FOLLOWED) :- followers(G, FOLLOWER, FOLLOWED),
+										    allDifferent(G, NOT_FOLLOWED, FOLLOWED).
 
 %ingores(G, X, Y)
 ignores(HUB, IGNORES, IGNORED) :- different(HUB, IGNORES, IGNORED),
@@ -32,9 +36,29 @@ ignores(HUB, IGNORES, IGNORED) :- different(HUB, IGNORES, IGNORED),
 
 %%% level 1 %%%
 
-% popular(G, X)
+% Popular
 
-% outcast(G, X)
+% Get people that a particular person follows
+% Good note for report - I had to implement it after trying to iterate over the graph in each separate function
+% This however, left me with modified graph (only the remainder) after the person of intereet. Therefore had to delegate it to auxiliary.
+followers([person(PERSON, FOLLOWERS) | _], PERSON, FOLLOWERS).
+followers([_ | REST], PESRON, FOLLOWERS) :- followers(REST, PESRON, FOLLOWERS).
+
+allFollowBack(_, _, []).
+allFollowBack(G, PERSON, [FOLLOWED | REST]) :- follows(G, FOLLOWED, PERSON),
+											   allFollowBack(G, PERSON, REST).
+
+popular(G, PERSON) :- followers(G, PERSON, FOLLOWERS),
+					  allFollowBack(G, PERSON, FOLLOWERS).
+
+% Outcast 
+
+allIgnore(_, _, []).
+allIgnore(G, PERSON, [FOLLOWED | REST]) :- ignores(G, FOLLOWED, PERSON),
+										   allIgnore(G, PERSON, REST).
+
+outcast(G, PERSON) :- followers(G, PERSON, FOLLOWERS),
+					  allIgnore(G, PERSON, FOLLOWERS).
 
 % friendly(G, X)
 
