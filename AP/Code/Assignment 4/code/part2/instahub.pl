@@ -99,7 +99,7 @@ hostile(G, X) :- get_followers(G, X, L), ignores_all(G, X, L).
 
 % aware(G, X, Y)
 
-aware(G, X, Y) :- aware_p(G, X, Y, [X]).
+aware(G, X, Y) :- aware_p(G, X, Y, [X, Y]).
 
 aware_p(G, X, Y, _) :- different(G, X, Y), follows(G, X, Y).
 aware_p(G, X, Y, ACC) :- follows(G, X, Z), check_all_different(G, Y, ACC), check_all_different(G, Z, ACC), aware_p(G, Z, Y, [Z | ACC]).
@@ -109,14 +109,19 @@ all_persons([], []).
 all_persons([person(X, _) | R1], [X | R]) :- all_persons(R1, R).
 
 % get_aware(G, X, L).
-get_aware(G, X, L) :- all_persons(G, A), get_aware_p(G, X, L, A).
+get_aware(G, X, L) :- all_persons(G, AP),get_aware_p(G, X, L, AP).
 
 % get_aware_p(G, X, L, ALL, ACC)
-get_aware_p(_, _, [], []). % :- aware(G, X, Y).
-get_aware_p(G, X, [Y | R1], [Y | R2]) :- aware(G, X, Y), get_aware_p(G, X, R1, R2).
-get_aware_p(G, X, L, [Y | R]) :- get_all_different(G, Y, L), get_aware_p(G, X, L, R).
+get_aware_p(_, _, [], []). % :- aware(G, X, Y), check_all_different(G, Y, A).
+get_aware_p(G, X, [Y | R], [Y | R2]) :- aware(G, X, Y),
+                                        % check_all_different(G, Y, A),
+                                        get_aware_p(G, X, R, R2).
+get_aware_p(G, X, L, [Y | R]) :- check_all_different(G, Y, L), get_aware_p(G, X, L, R).
+
+% get_aware_p(G, X, A, A) :- get_aware_p(G, X, R, A).
+% get_aware_p(G, X, L, [Y | R]) :- get_all_different(G, Y, L), get_aware_p(G, X, L, R).
 % ignorant(G, X, Y)
-ignorant(G, X, Y) :- ignorant_p(G, X, Y, []).
+ignorant(G, X, Y) :- different(G, X, Y), get_aware(G, X, L), check_all_different(G, Y, L).
 
 % ignorant_p(G, X, Y, [Z | ACC]) :- aware(G, X, Z), ignorant_p()
 %%% level 3 %%%
