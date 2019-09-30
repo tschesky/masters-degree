@@ -37,6 +37,9 @@ check_all_different(G, X, L) :- all_persons(G, AP), check_all_different_p(G, X, 
 check_all_different_p(_, _, [Y], _).
 check_all_different_p(G, X, [Y | R], FL) :- select(Y, FL, SL), different(G, X, Y), check_all_different_p(G, X, R, SL).
 
+% all_different(G, X, [Y]) :- different(G, X, Y).
+% all_different(G, X, [Y | R]) :- different(G, X, Y), all_different(G, X, R). 
+
 % creates list of different people, only one result
 get_all_different(G, X, Y) :- get_all_different_p(G, G, X, Y).
  
