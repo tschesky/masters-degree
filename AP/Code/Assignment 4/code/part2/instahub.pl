@@ -32,13 +32,12 @@ get_following([_|R], X, Y) :- get_following(R, X, Y).
 
 % all_different(G, X, L) checks if all persons in L are different from X in graph G --  enumerates all posibilites
 check_all_different(G, X, L) :- all_persons(G, AP), check_all_different_p(G, X, L, AP).
-
 % check_all_different_p(G, X, L) -
-check_all_different_p(_, _, [Y], _).
+check_all_different_p(_, _, [], _).
 check_all_different_p(G, X, [Y | R], FL) :- select(Y, FL, SL), different(G, X, Y), check_all_different_p(G, X, R, SL).
 
-% all_different(G, X, [Y]) :- different(G, X, Y).
-% all_different(G, X, [Y | R]) :- different(G, X, Y), all_different(G, X, R). 
+% check_all_different(_, _, []). % :- different(G, X, Y).
+% check_all_different(G, X, [Y | R]) :- different(G, X, Y), check_all_different(G, X, R). 
 
 % creates list of different people, only one result
 get_all_different(G, X, Y) :- get_all_different_p(G, G, X, Y).
@@ -55,7 +54,7 @@ get_all_different_p(G, [person(X,_) | GR], X, R) :- get_all_different_p(G, GR, X
 % ignores(G, X, Y)
 ignores(G, X, Y) :- get_following(G, X, L),
                     follows(G, Y, X),
-                    all_different(G, Y, L).                    
+                    check_all_different(G, Y, L).                    
 
 %%% level 1 %%%
 
@@ -79,7 +78,7 @@ get_followers(G, X, L) :- get_followers_p(G, G, X, L).
 % get_followers_p(CG, G, X, L) - subroutine that always has the complete initial graph as first argument
 get_followers_p(_, [], _, []).
 get_followers_p(G, [person(Y, L)|GR], X, [Y|R]) :- elem(X, L), get_followers_p(G, GR, X, R).
-get_followers_p(G, [person(_, L)|GR], X, R) :- all_different(G, X, L), get_followers_p(G, GR, X, R).
+get_followers_p(G, [person(_, L)|GR], X, R) :- check_all_different(G, X, L), get_followers_p(G, GR, X, R).
 
 % follows_all(G, X, L) - true if X follows all persons in L in G
 follows_all(_, _, []).
@@ -99,27 +98,23 @@ hostile(G, X) :- get_followers(G, X, L), ignores_all(G, X, L).
 
 % aware(G, X, Y)
 
-aware(G, X, Y) :- aware_p(G, X, Y, [X, Y]).
+aware(G, X, Y) :- aware_p(G, X, Y, [X]).
 
-aware_p(G, X, Y, _) :- different(G, X, Y), follows(G, X, Y).
-aware_p(G, X, Y, ACC) :- follows(G, X, Z), check_all_different(G, Y, ACC), check_all_different(G, Z, ACC), aware_p(G, Z, Y, [Z | ACC]).
+aware_p(G, X, Y, _) :- follows(G, X, Y).
+aware_p(G, X, Y, ACC) :- follows(G, X, Z),
+                         check_all_different(G, Y, ACC),
+                         check_all_different(G, Z, ACC),
+                         aware_p(G, Z, Y, [Z | ACC]).
 
 % all_persons(G, L) retreives list containing all persons of G
 all_persons([], []).
 all_persons([person(X, _) | R1], [X | R]) :- all_persons(R1, R).
 
 % get_aware(G, X, L).
-get_aware(G, X, L) :- all_persons(G, AP),get_aware_p(G, X, L, AP).
+acc_aware(G, [person(Y, _)], X, [Y]) :- follows(G, X, Y).                             
+acc_aware(G, [person(Y, _) | R], X, R2) :- follows(G, X, Y), check_all_different(G, Y, R2), acc_aware(G, R, Y, [Y | R2]).
 
-% get_aware_p(G, X, L, ALL, ACC)
-get_aware_p(_, _, [], []). % :- aware(G, X, Y), check_all_different(G, Y, A).
-get_aware_p(G, X, [Y | R], [Y | R2]) :- aware(G, X, Y),
-                                        % check_all_different(G, Y, A),
-                                        get_aware_p(G, X, R, R2).
-get_aware_p(G, X, L, [Y | R]) :- check_all_different(G, Y, L), get_aware_p(G, X, L, R).
 
-% get_aware_p(G, X, A, A) :- get_aware_p(G, X, R, A).
-% get_aware_p(G, X, L, [Y | R]) :- get_all_different(G, Y, L), get_aware_p(G, X, L, R).
 % ignorant(G, X, Y)
 ignorant(G, X, Y) :- different(G, X, Y), get_aware(G, X, L), check_all_different(G, Y, L).
 
