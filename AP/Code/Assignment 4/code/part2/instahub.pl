@@ -110,9 +110,35 @@ aware_p(G, X, Y, ACC) :- follows(G, X, Z),
 all_persons([], []).
 all_persons([person(X, _) | R1], [X | R]) :- all_persons(R1, R).
 
-% get_aware(G, X, L).
-acc_aware(G, [person(Y, _)], X, [Y]) :- follows(G, X, Y).                             
-acc_aware(G, [person(Y, _) | R], X, R2) :- follows(G, X, Y), check_all_different(G, Y, R2), acc_aware(G, R, Y, [Y | R2]).
+
+% acc_aware(CG, G, X, L).
+% acc_aware(G, X, L) :- get_following(G, X, L).                             
+% acc_aware(G, X, R) :- get_following(G, X, [Y | L]),
+%                       elem(L, Y),
+%                       check_all_different(G, Y, R),
+%                       append(L, SHIT, R),
+                    %   acc_aware(G, Y, SHIT).
+
+% get_followers_inc(G, X, L, ACC).
+
+followed_by_any(G, X, [Y | _]) :- follows(G, Y, X).
+followed_by_any(G, X, [_ | R]) :- followed_by_any(G, X, R).
+
+
+get_followers_inc(G, X, L) :- get_followers_inc_p(G, [X], [X | L]).
+
+% get_followers_inc_p(G, )
+% get_followers_inc_p(G, R, [Y | R1]) :- followed_by_any(G, Y, R),
+%                                        check_all_different(G, Y, R1),
+%                                        get_followers_inc(G, [Y | R], R1).
+
+
+get_followers_inc_p(G, [], _).
+get_followers_inc_p(G, [X | R], [X, Y | L]) :- follows(G, X, Y),
+                                      check_all_different(G, Y, L),
+                                      get_followers_inc(G, [Y | R], L).
+
+
 
 
 % ignorant(G, X, Y)
