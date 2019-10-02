@@ -65,4 +65,31 @@ test(outcast1, [nondet]) :-
 test(outcast2, [fail]) :-
     g1(G), outcast(G, clark).
 
+test(friendly, [nondet]) :-
+    g1(G), friendly(G, barry).
+
+test(friendly2, [set(X == [barry, bruce])]) :-
+    g1(G), friendly(G, X).
+
+test(friendly3, [fail]) :-
+    g1(G), friendly(G, kara).
+
+test(hostile, [nondet]) :-
+    g1(G), hostile(G, bruce).
+
+test(hostile2, [set(X == [bruce, oliver])]) :-
+    g1(G), hostile(G, X).
+
+test(hostile3, [fail]) :-
+    g1(G), hostile(G, clark).
+
+test(aware1, [nondet]) :-
+    g1(G), aware(G, kara, barry).
+
+test(aware2, [set(X == [barry, clark, oliver])]) :-
+    g1(G), aware(G, kara, X).
+
+test(aware3, [fail]) :-
+    g1(G), aware(G, kara, bruce).
+
 :- end_tests(instahub).

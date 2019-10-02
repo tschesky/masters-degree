@@ -3,18 +3,19 @@
 
 %%% level 0 %%%   
 
-% "Pure prolog" nonsense, so override "in"
+% Check if element ins present in a given list
 inList(ELEM, [ELEM | _]).
 inList(ELEM, [_ | TAIL]) :- inList(ELEM, TAIL).
 
-% No good way to implement that, as only facts not stated are considered to be true
-% ...
+% Check if two lists are the same (including order of elements)
 equalLists([], []).
 equalLists([H | T1], [H | T2]) :- equalLists(T1, T2).
 
+% Check if two lists have the same length
 sameLengthLists([], []).
 sameLengthLists([_ | T1], [_ | T2]) :- sameLengthLists(T1, T2).
 
+% Check if two lists are the same (very weak comparison, but if we assume that a list contains unique elements - it works)
 equalLists2_([], _).
 equalLists2_([H | T1], L2) :- inList(H, L2),
 							  equalLists2_(T1, L2).
@@ -28,20 +29,16 @@ selectCustom3_(Tail, Head, Head, Tail).
 selectCustom3_([Head2|Tail], Head, X, [Head|Rest]) :-
     selectCustom3_(Tail, Head2, X, Rest).
 
-notInList(ELEM, LIST) :- selectCustom(ELEM, LIST, TMP),
-						 equalLists(LIST, TMP).
-
-%follows(G, X, Y)
+% follows(G, X, Y)
 follows([person(FOLLOWER, FOLLOWS) | _], FOLLOWER, FOLLOWED) :- inList(FOLLOWED, FOLLOWS).
 follows([_ | TAIL], FOLLOWER, FOLLOWED) :- follows(TAIL, FOLLOWER, FOLLOWED).
 
-%different(G, X, Y)
+% different(G, X, Y)
 different([person(PERSON1, _) | REST], PERSON1, PERSON2) :- inList(person(PERSON2, _), REST). % We found person 1, now check if person 2 is in remainder of the graph
 different([person(PERSON2, _) | REST], PERSON1, PERSON2) :- inList(person(PERSON1, _), REST). % Symmetric case
 different([_ | REST], PERSON1, PERSON2) :- different(REST, PERSON1, PERSON2).                 % Just traverse the graph
 
-% Again - need to have a separate function for iterating over graphs for each predicate, as I cant use "impure" prolog
-% for passing predicates as function arguments...
+% Apply different over the whole list
 allDifferent(_, _, []).
 allDifferent(G, PERSON1, [PERSON2 | REST]) :- different(G, PERSON1, PERSON2),
 											  allDifferent(G, PERSON1, REST).
@@ -58,8 +55,6 @@ ignores(HUB, IGNORES, IGNORED) :- different(HUB, IGNORES, IGNORED),
 %%% level 1 %%%
 
 % Get people that a particular person follows
-% Good note for report - I had to implement it after trying to iterate over the graph in each separate function
-% This however, left me with modified graph (only the remainder) after the person of intereet. Therefore had to delegate it to auxiliary.
 getFollowed([person(PERSON, FOLLOWERS) | _], PERSON, FOLLOWERS).
 getFollowed([_ | REST], PERSON, FOLLOWERS) :- getFollowed(REST, PERSON, FOLLOWERS).
 
@@ -89,26 +84,35 @@ followers([person(NAME, FOLLOWERS) | REST], FOLLOWED, RETURN) :- conditionalList
 																 append(RETURN, TMP, X),
 																 followers(REST, FOLLOWED, X).
 
-cool(_, _, _, _).
-cool(G, COOL, COOL, NAME) :- follows(G, COOL, NAME).
+% get_followers(G, X, L) - true iff the list L contains all followers of X in G
+get_followers(G, X, L) :- get_followers_p(G, G, X, L).
 
-isCool(_, _, [], _).
-isCool(G, COOL, [HEAD | REST], NAME) :- cool(G, COOL, HEAD, NAME),
-									    isCool(G, COOL, REST, NAME).
+% get_followers_p(CG, G, X, L) - subroutine that always has the complete initial graph as first argument
+get_followers_p(_, [], _, []).
+get_followers_p(G, [person(Y, L)|GR], X, [Y|R]) :- inList(X, L),
+												   get_followers_p(G, GR, X, R).
 
-isFriendly(_, [], _).
-isFriendly(G, [person(NAME, FOLLOWERS) | REST], COOL) :- isCool(G, COOL, FOLLOWERS, NAME),
-														 isFriendly(G, REST, COOL).
+get_followers_p(G, [person(_, L)|GR], X, R) :- allDifferent(G, X, L),
+											   get_followers_p(G, GR, X, R).
 
-friendly(G, X) :- isFriendly(G, G, X).
+% follows_all(G, X, L) - true if X follows all persons in L in G
+follows_all(_, _, []).
+follows_all(G, X, [Y|R]) :- follows(G, X, Y),
+					        follows_all(G, X, R).
+
+% friendly(G, X)
+friendly(G, X) :- get_followers(G, X, L),
+			      follows_all(G, X, L).
 
 % hostile(G, X)
+ignores_all(_, _, []).
+ignores_all(G,X, [Y|R]) :- ignores(G, X, Y), ignores_all(G, X, R).
+
+hostile(G, X) :- get_followers(G, X, L), ignores_all(G, X, L).
 
 %%% level 2 %%%
 
 % Convert this whole nonsense to graph-term form so its easier to actually search for paths
-% Graph-term: g(E, V), where E is a list of edges and V is a list of getVertices
-% Now both aware and ignorant should be a matter of finding a path in the graph
 getVertices([], []).
 getVertices([person(NAME, _) | REST], [NAME | V]) :- getVertices(REST, V).
 
@@ -131,19 +135,7 @@ isEdge(g(V, E), A, B) :- inList(A, V),
 						 inList(B, V),
 						 inEdges(E, A, B).
 
-path(G, A, B) :- walk(G, A, B, []).
-
-walk(G, A, B, V) :- isEdge(G, A, X),
-					not(inList(X, V)),         % Write a predicate for notInList...?
-					(
-						B = X
-					;
-						walk(G, X, B, [A | V])
-					)
-					.
-
 % Auxiliary function for concatenation of list of ListOfList
-% Its obviously just copy-paste of implementation form SWI, but hey - "Pure Prolog", amirite?
 appendLists(ListOfLists, List) :-
     appendLists_(ListOfLists, List).
 
@@ -156,12 +148,20 @@ appendLists([], L, L).
 appendLists([H|T], L, [H|R]) :-
     appendLists(T, L, R).
 
-aware(G, X, Y) :- different(G, X, Y),
-				  toGraph(G, GT),
-				  path(GT, X, Y).
+all_persons([], []).
+all_persons([person(X, _) | R1], [X | R]) :- all_persons(R1, R).
 
-ignorant(G, X, Y) :- different(G, X, Y), 
-					 not(aware(G, X, Y)).   % Meh...
+check_all_different(G, X, L) :- all_persons(G, AP), check_all_different_p(G, X, L, AP).
+check_all_different_p(_, _, [], _).
+check_all_different_p(G, X, [Y | R], FL) :- select(Y, FL, SL), different(G, X, Y), check_all_different_p(G, X, R, SL).
+
+aware(G, X, Y) :- aware_p(G, X, Y, [X]).
+
+aware_p(G, X, Y, _) :- follows(G, X, Y).
+aware_p(G, X, Y, ACC) :- follows(G, X, Z),
+                         check_all_different(G, Y, ACC),
+                         check_all_different(G, Z, ACC),
+                         aware_p(G, Z, Y, [Z | ACC]).
 
 %%% level 3 %%%
 
