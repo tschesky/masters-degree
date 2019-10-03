@@ -55,7 +55,8 @@ loop(Routing, Env) ->
 														loop(Routing, Env)
 												end;
 		{request, Req, From, Ref} ->  Res = get_response(Routing, Env, Req),
-									  From ! {Ref, Res}
+									  From ! {Ref, Res},
+									  loop(Routing, Env)
 	end.
 
 start(Global) ->
