@@ -15,7 +15,6 @@ get_response(Routing, Env, {Path, _}=Req) ->
 		exit :   e -> {500, "text/html", ""}
 	end.
 
-
 lookup_route(Routing, Path) -> 
 	Candidates = lists:filter(fun({X, _, _}) -> filter_path(Path, X) end, Routing),
 	case Candidates of
@@ -23,11 +22,6 @@ lookup_route(Routing, Path) ->
 		_  -> get_longest_prefix(Candidates, {"", none, none})
 	end.
 	
-
-	
-
-
-
 get_longest_prefix([], Longest) -> Longest;
 get_longest_prefix([{Prefix, _, _}=Head | Tail], {Longest_Prefix, _, _})
 								when (length(Prefix) > length(Longest_Prefix)) -> get_longest_prefix(Tail, Head);
@@ -39,23 +33,21 @@ filter_path(Path, Prefix) -> 	case string:prefix(Path, Prefix) of
 									_ -> true
 								end.
 
-
 add_routes(Env, Prefixes, Action) ->
 	try
 		Id = make_ref(),
 		TmpList = [{X, Id, Action} || X <- Prefixes],
-		{Id, TmpList ++ Env}
+		{ok, Id, TmpList ++ Env}
 	catch
 		throw: e -> {error, e};
 		error: e -> {error, e}
 	end.
 
-
 loop(Routing, Env) ->
 	receive
 		{register, Pid, Prefixes, Action} -> Res = add_routes(Routing, Prefixes, Action), % TODO: error handling
 												case Res of
-													{Id, NewRouting} -> 
+													{ok, Id, NewRouting} -> 
 														Pid ! {ok, Id},
 														loop(NewRouting, Env);
 													{error, e} -> 
@@ -65,8 +57,6 @@ loop(Routing, Env) ->
 		{request, Req, From, Ref} ->  Res = get_response(Routing, Env, Req),
 									  From ! {Ref, Res}
 	end.
-
-
 
 start(Global) ->
 	try 
@@ -85,6 +75,5 @@ new_route(Flamingo, Prefixes, Action) ->
 		{error, Reason} -> 	{error, Reason}
 	end.
 		
-
 drop_route(_Flamingo, _Id) ->
     not_implemented.

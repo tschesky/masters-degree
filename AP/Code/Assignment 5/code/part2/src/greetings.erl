@@ -8,7 +8,7 @@ greeter({_Path, [{"name", Name} | _ ]}, Server) ->
 
 server() ->
     {ok, F} = flamingo:start("The Flamingo Server"),
-    flamingo:new_route(F, ["/hello"], fun greeter/2, none),
+    flamingo:new_route(F, ["/hello"], fun greeter/2),
     F.
 
 try_it(Server) ->
