@@ -33,11 +33,11 @@ filter_path(Path, Prefix) -> 	case string:prefix(Path, Prefix) of
 									_ -> true
 								end.
 
-add_routes(Env, Prefixes, Action) ->
+add_routes(Routing, Prefixes, Action) ->
 	try
 		Id = make_ref(),
 		TmpList = [{X, Id, Action} || X <- Prefixes],
-		{ok, Id, TmpList ++ Env}
+		{ok, Id, TmpList ++ Routing}
 	catch
 		throw: e -> {error, e};
 		error: e -> {error, e}

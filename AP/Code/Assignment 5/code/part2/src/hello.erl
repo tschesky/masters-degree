@@ -8,7 +8,7 @@ goodbye(_, _) ->
 	{200, "text/plain", "Sad to see you go already."}.
 
 server() ->
-	{ok, F} = flamingo:start("The Falmingo Server"),
+	{ok, F} = flamingo:start("The Flamingo Server"),
 	flamingo:new_route(F, ["/hello"], fun hello/2),
 	flamingo:new_route(F, ["/goodbye"], fun goodbye/2),
 	F.
