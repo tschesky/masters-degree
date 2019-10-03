@@ -28,7 +28,7 @@ get_longest_prefix([{Prefix, _, _}=Head | Tail], {Longest_Prefix, _, _})
 get_longest_prefix([_ | Tail], Longest) -> get_longest_prefix(Tail, Longest).
 
 
-filter_path(Path, Prefix) -> 	case string:prefix(Path, Prefix) of
+filter_path(Path, Prefix) -> case string:prefix(Path, Prefix) of
 									nomatch -> false;
 									_ -> true
 								end.

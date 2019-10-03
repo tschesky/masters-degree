@@ -25,8 +25,8 @@ mood_loop(State) ->
 server() ->
     {ok, F} = flamingo:start("The Flamingo Server"),
     Pid = spawn(fun() -> mood_loop(sad) end),
-	flamingo:new_route(F, ["/moo"], fun(Path, Args) -> moo(Pid, Path, Args) end),
-	flamingo:new_route(F, ["/mood"], fun(Path, Args) -> mood(Pid, Path, Args) end),
+	flamingo:new_route(F, ["/moo"], fun(Req, Env) -> moo(Pid, Req, Env) end),
+	flamingo:new_route(F, ["/mood"], fun(Req, Env) -> mood(Pid, Req, Env) end),
 	F.
 
 try_it(Server, Path) ->
