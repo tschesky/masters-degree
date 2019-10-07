@@ -3,17 +3,24 @@
 -export([start/1, new_route/3, request/4, drop_route/2, lookup_route/2]).
 -import(lists, [filter/2]).
 
-get_response(Routing, Env, {Path, _}=Req) -> 
-	try
-		case lookup_route(Routing, Path) of
-			none -> {404, "text/html", ""};
-			{_,_, Action} -> Action(Req, Env)
-		end
-	catch
-		throw :  e -> {500, "text/html", ""};
-		error : e -> {500, "text/html", ""};
-		exit :   e -> {500, "text/html", ""}
+handle_response(From, Ref, Routing, Env, {Path, _}=Req) -> 
+	case lookup_route(Routing, Path) of
+		none -> From ! {404, "text/html", ""};
+		{_,_, Action} -> spawn(fun() -> call_action(From, Ref, Action, Req, Env) end)
 	end.
+
+
+call_action(From, Ref, Action, Req, Env) ->
+	try
+		Res = Action(Req, Env),
+		From ! {Ref, Res}
+	catch
+		throw :  e -> From ! {500, "text/html", ""};
+		error : e -> From ! {500, "text/html", ""};
+		exit :   e -> From ! {500, "text/html", ""}
+	end.
+
+
 
 lookup_route(Routing, Path) -> 
 	Candidates = lists:filter(fun({X, _, _}) -> filter_path(Path, X) end, Routing),
@@ -54,8 +61,7 @@ loop(Routing, Env) ->
 														Pid ! {error, e},
 														loop(Routing, Env)
 												end;
-		{request, Req, From, Ref} ->  Res = get_response(Routing, Env, Req),
-									  From ! {Ref, Res},
+		{request, Req, From, Ref} ->  handle_response(From, Ref, Routing, Env, Req),
 									  loop(Routing, Env)
 	end.
 
