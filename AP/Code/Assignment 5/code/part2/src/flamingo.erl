@@ -24,19 +24,19 @@ get_response(Routing, Env, {Path, _}=Req) ->
 	end.
 
 lookup_route(Routing, Path) -> 
-	Route = lists:foldl(fun(X, Longest) -> filter_path(Path, X, Longest) end, "", Routing),
+	Route = lists:foldl(fun(X, Longest) -> filter_path(Path, X, Longest) end, {"", none, none}, Routing),
 	case Route of
-		"" -> none;
+		{"", _, _} -> none;
 		_ -> Route
 	end.
 
-filter_path(Path, {X, _, _}, Longest) -> case string:prefix(X, Path) of
-								         	  nomatch -> Longest;
-								        	  _ -> case (length(X) > length(Longest)) of
-								        		 	  true -> X;
-								        		 	  false -> Longest
-								          		   end
-								          end.
+filter_path(Path, {X, _, _}=X1, {L, _, _}=L1) -> case string:prefix(X, Path) of
+								         	         nomatch -> L1;
+								        	         _ -> case (length(X) > length(L)) of
+								        		 	          true -> X1;
+								        		 	       false -> L1
+								          		          end
+								                     end.
 
 add_routes(Routing, Prefixes, Action) ->
 	try
