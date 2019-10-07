@@ -1,11 +1,11 @@
 -module(flamingo).
 
--export([start/1, new_route/3, request/4, drop_route/2, lookup_route/2]).
+-export([start/1, new_route/3, request/4, drop_route/2, get_routes/1, drop_route_by_id/2]).
 -import(lists, [filter/2]).
 
 handle_response(From, Ref, Routing, Env, {Path, _}=Req) -> 
 	case lookup_route(Routing, Path) of
-		none -> From ! {404, "text/html", ""};
+		none -> From ! {Ref, {404, "text/html", ""}};
 		{_,_, Action} -> spawn(fun() -> call_action(From, Ref, Action, Req, Env) end)
 	end.
 
@@ -15,12 +15,10 @@ call_action(From, Ref, Action, Req, Env) ->
 		Res = Action(Req, Env),
 		From ! {Ref, Res}
 	catch
-		throw :  e -> From ! {500, "text/html", ""};
-		error : e -> From ! {500, "text/html", ""};
-		exit :   e -> From ! {500, "text/html", ""}
+		throw :  _ -> From ! {Ref, {500, "text/html", ""}};
+		error : _ -> From ! {Ref, {500, "text/html", ""}};
+		exit :   _ -> From ! {Ref, {500, "text/html", ""}}
 	end.
-
-
 
 lookup_route(Routing, Path) -> 
 	Candidates = lists:filter(fun({X, _, _}) -> filter_path(Path, X) end, Routing),
@@ -28,7 +26,12 @@ lookup_route(Routing, Path) ->
 		[] -> none;
 		_  -> get_longest_prefix(Candidates, {"", none, none})
 	end.
-	
+
+drop_route_by_id(Routing, Id) -> 
+	lists:filter(fun({_, Route_Id, _}) -> Route_Id /= Id end, Routing).
+
+
+
 get_longest_prefix([], Longest) -> Longest;
 get_longest_prefix([{Prefix, _, _}=Head | Tail], {Longest_Prefix, _, _})
 								when (length(Prefix) > length(Longest_Prefix)) -> get_longest_prefix(Tail, Head);
@@ -46,8 +49,8 @@ add_routes(Routing, Prefixes, Action) ->
 		TmpList = [{X, Id, Action} || X <- Prefixes],
 		{ok, Id, TmpList ++ Routing}
 	catch
-		throw: e -> {error, e};
-		error: e -> {error, e}
+		throw: E -> {error, E};
+		error: E -> {error, E}
 	end.
 
 loop(Routing, Env) ->
@@ -62,7 +65,13 @@ loop(Routing, Env) ->
 														loop(Routing, Env)
 												end;
 		{request, Req, From, Ref} ->  handle_response(From, Ref, Routing, Env, Req),
-									  loop(Routing, Env)
+									  loop(Routing, Env);
+		{drop, Id} -> 	
+			NewRouting = drop_route_by_id(Routing, Id),
+			loop(NewRouting, Env);
+		{get, From} -> 
+			From ! Routing,
+			loop(Routing, Env)
 	end.
 
 start(Global) ->
@@ -82,5 +91,8 @@ new_route(Flamingo, Prefixes, Action) ->
 		{error, Reason} -> 	{error, Reason}
 	end.
 		
-drop_route(_Flamingo, _Id) ->
-    not_implemented.
+drop_route(Flamingo, Id) ->
+    Flamingo ! {drop, Id}.
+
+get_routes(Flamingo) -> 
+	Flamingo ! {get, self()}.
