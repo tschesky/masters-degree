@@ -6,14 +6,21 @@
 handle_response(From, Ref, Routing, Env, {Path, _}=Req) -> 
 	case lookup_route(Routing, Path) of
 		none -> From ! {Ref, {404, "text/html", ""}};
-		{_,_, Action} -> spawn(fun() -> call_action(From, Ref, Action, Req, Env) end)
+		% Add the trap_exit so the worker process can actually trap external exits called on it
+		{_,_, Action} -> spawn(fun() -> process_flag(trap_exit, true), call_action(From, Ref, Action, Req, Env) end)
 	end.
 
 
 call_action(From, Ref, Action, Req, Env) ->
 	try
 		Res = Action(Req, Env),
-		From ! {Ref, Res}
+		% Make sure the result conforms to expected format
+		case Res of
+		 	{200, _, _} -> From ! {Ref, Res};
+		 	{404, _, _} -> From ! {Ref, Res};
+		 	{500, _, _} -> From ! {Ref, Res};
+		 	_ -> From ! {Ref, {500, "text/html", ""}}
+		 end
 	catch
 		throw :  _ -> From ! {Ref, {500, "text/html", ""}};
 		error : _ -> From ! {Ref, {500, "text/html", ""}};
@@ -27,23 +34,16 @@ lookup_route(Routing, Path) ->
 		_ -> Route
 	end.
 
-drop_route_by_id(Routing, Id) -> 
-	lists:filter(fun({_, Route_Id, _}) -> Route_Id /= Id end, Routing).
-
-
-
-get_longest_prefix([], Longest) -> Longest;
-get_longest_prefix([{Prefix, _, _}=Head | Tail], {Longest_Prefix, _, _})
-								when (length(Prefix) > length(Longest_Prefix)) -> get_longest_prefix(Tail, Head);
-get_longest_prefix([_ | Tail], Longest) -> get_longest_prefix(Tail, Longest).
-
-filter_path(Path, {X, _, _}=X1, {L, _, _}=L1) -> case string:prefix(X, Path) of
+filter_path(Path, {X, _, _}=X1, {L, _, _}=L1) -> case string:prefix(Path, X) of
 								         	         nomatch -> L1;
 								        	         _ -> case (length(X) > length(L)) of
 								        		 	          true -> X1;
 								        		 	       false -> L1
 								          		          end
 								                     end.
+
+drop_route_by_id(Routing, Id) -> 
+	lists:filter(fun({_, Route_Id, _}) -> Route_Id /= Id end, Routing).
 
 add_routes(Routing, Prefixes, Action) ->
 	try
