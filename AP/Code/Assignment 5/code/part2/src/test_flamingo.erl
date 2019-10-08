@@ -100,8 +100,13 @@ counter_test_() ->
             receive
                  X5 ->
                      ?assertMatch({Ref, {200, _, "-1337"}}, X5)
+            end,
+            flamingo:request(S, {"m a -> (a -> m b) -> m b", [{"xasfasd", "fdhfgsh"},{"x", "1338"}]},
+                              self(), Ref), 
+            receive
+                 X6 ->
+                     ?assertMatch({Ref, {404, _, _}}, X6)
             end
-        
      end}.
 
 
