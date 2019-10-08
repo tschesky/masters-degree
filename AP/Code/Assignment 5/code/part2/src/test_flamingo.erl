@@ -34,6 +34,25 @@ greetings_test_() ->
              end
      end}.
 
+loop_message(_, _, _, 0) -> ok;
+loop_message(F, Path, Expected, Counter) ->
+    Ref = make_ref(),
+    flamingo:request(F, {Path, []}, self(), Ref),
+    receive
+        X ->
+            ?assertMatch({Ref, {200, _, Expected}}, X),
+            loop_message(F, Path, Expected, Counter - 1)
+    end.
+
+mood_test_() ->
+    {"Start a mood server and see if it works",
+     fun() ->
+            F = mood:server(),
+            loop_message(F, "/mood", "Sad", 5),
+            loop_message(F, "/moo", "That's funny", 1),
+            loop_message(F, "/mood", "Happy!", 5)
+     end}.
+
 drop_route_test_() ->
     {"Start a server, send a request and then drop route.",
      fun () ->
