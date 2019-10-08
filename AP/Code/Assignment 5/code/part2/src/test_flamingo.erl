@@ -88,7 +88,20 @@ counter_test_() ->
             receive
                  X3 ->
                      ?assertMatch({Ref, {200, _, "0"}}, X3)
+            end,
+            flamingo:request(S, {"/inc_with", [{"y", "towel"}]},
+                              self(), Ref), 
+            receive
+                 X4 ->
+                     ?assertMatch({Ref, {200, _, "1"}}, X4)
+            end,
+            flamingo:request(S, {"/dec_with", [{"xasfasd", "fdhfgsh"},{"x", "1338"}]},
+                              self(), Ref), 
+            receive
+                 X5 ->
+                     ?assertMatch({Ref, {200, _, "-1337"}}, X5)
             end
+        
      end}.
 
 
