@@ -1,26 +1,23 @@
 -module(flamingo).
 
--export([start/1, new_route/3, request/4, drop_route/2, lookup_route/2]).
--import(lists, [filter/2, foldl/3]).
+-export([start/1, new_route/3, request/4, drop_route/2, get_routes/1, drop_route_by_id/2]).
+-import(lists, [filter/2]).
 
-get_response(Routing, Env, {Path, _}=Req) -> 
+handle_response(From, Ref, Routing, Env, {Path, _}=Req) -> 
+	case lookup_route(Routing, Path) of
+		none -> From ! {Ref, {404, "text/html", ""}};
+		{_,_, Action} -> spawn(fun() -> call_action(From, Ref, Action, Req, Env) end)
+	end.
+
+
+call_action(From, Ref, Action, Req, Env) ->
 	try
-		case lookup_route(Routing, Path) of
-			none -> {404, "text/html", ""};
-			{_,_, Action} -> 
-				% Quick and dirty - but we need to do sth like that here anyway, there was a discussion
-				% On absalon that we should convert stupid output from Actions into reasonable response format
-				case Action(Req, Env) of
-				 	{200, _, _}=Resp -> Resp;
-				 	{404, _, _}=Resp -> Resp;
-				 	{500, _, _}=Resp -> Resp;
-				 	_ -> {500, "text/html", ""}
-				end
-		end
+		Res = Action(Req, Env),
+		From ! {Ref, Res}
 	catch
-		throw :  e -> {500, "text/html", ""};
-		error : e -> {500, "text/html", ""};
-		exit :   e -> {500, "text/html", ""}
+		throw :  _ -> From ! {Ref, {500, "text/html", ""}};
+		error : _ -> From ! {Ref, {500, "text/html", ""}};
+		exit :   _ -> From ! {Ref, {500, "text/html", ""}}
 	end.
 
 lookup_route(Routing, Path) -> 
@@ -29,6 +26,16 @@ lookup_route(Routing, Path) ->
 		{"", _, _} -> none;
 		_ -> Route
 	end.
+
+drop_route_by_id(Routing, Id) -> 
+	lists:filter(fun({_, Route_Id, _}) -> Route_Id /= Id end, Routing).
+
+
+
+get_longest_prefix([], Longest) -> Longest;
+get_longest_prefix([{Prefix, _, _}=Head | Tail], {Longest_Prefix, _, _})
+								when (length(Prefix) > length(Longest_Prefix)) -> get_longest_prefix(Tail, Head);
+get_longest_prefix([_ | Tail], Longest) -> get_longest_prefix(Tail, Longest).
 
 filter_path(Path, {X, _, _}=X1, {L, _, _}=L1) -> case string:prefix(X, Path) of
 								         	         nomatch -> L1;
@@ -44,25 +51,29 @@ add_routes(Routing, Prefixes, Action) ->
 		TmpList = [{X, Id, Action} || X <- Prefixes],
 		{ok, Id, TmpList ++ Routing}
 	catch
-		throw: e -> {error, e};
-		exit: e -> {error, e};
-		error: e -> {error, e}
+		throw: E -> {error, E};
+		error: E -> {error, E}
 	end.
 
 loop(Routing, Env) ->
 	receive
-		{register, Pid, Prefixes, Action} -> Res =  add_routes(Routing, Prefixes, Action), % TODO: error handling
-											 case Res of
-											 	{ok, Id, NewRouting} -> 
-											 		Pid ! {ok, Id},
-											 		loop(NewRouting, Env);
-											 	{error, e} -> 
-											 		Pid ! {error, e},
-											 		loop(Routing, Env)
-											 end;
-		{request, Req, From, Ref} ->  Res = get_response(Routing, Env, Req),
-									  From ! {Ref, Res},
-									  loop(Routing, Env)
+		{register, Pid, Prefixes, Action} -> Res = add_routes(Routing, Prefixes, Action), % TODO: error handling
+												case Res of
+													{ok, Id, NewRouting} -> 
+														Pid ! {ok, Id},
+														loop(NewRouting, Env);
+													{error, e} -> 
+														Pid ! {error, e},
+														loop(Routing, Env)
+												end;
+		{request, Req, From, Ref} ->  handle_response(From, Ref, Routing, Env, Req),
+									  loop(Routing, Env);
+		{drop, Id} -> 	
+			NewRouting = drop_route_by_id(Routing, Id),
+			loop(NewRouting, Env);
+		{get, From} -> 
+			From ! Routing,
+			loop(Routing, Env)
 	end.
 
 start(Global) ->
@@ -83,5 +94,8 @@ new_route(Flamingo, Prefixes, Action) ->
 		_ -> blah
 	end.
 		
-drop_route(_Flamingo, _Id) ->
-    not_implemented.
+drop_route(Flamingo, Id) ->
+    Flamingo ! {drop, Id}.
+
+get_routes(Flamingo) -> 
+	Flamingo ! {get, self()}.
