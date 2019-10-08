@@ -56,9 +56,9 @@ mood_test_() ->
 drop_route_test_() ->
     {"Start a server, send a request and then drop route.",
      fun () ->
-             {ok, F} = flamingo:start(drop_test),
-             Ref = make_ref(),
-             {ok, Id} = flamingo:new_route(F, ["/sleep"], fun(_, _) -> timer:sleep(500), _ = (10/0), {200, "", "sleep"} end),
+            {ok, F} = flamingo:start(drop_test),
+            Ref = make_ref(),
+            {ok, Id} = flamingo:new_route(F, ["/sleep"], fun(_, _) -> timer:sleep(500), _ = (10/0), {200, "", "sleep"} end),
             flamingo:request(F, {"/sleep", []},
                               self(), Ref),
             flamingo:drop_route(F, Id),
@@ -76,6 +76,55 @@ drop_route_test_() ->
             receive
                 X3 ->
                     ?assertMatch({Ref, {500, _, _}}, X3)
+            end
+     end}.
+
+counter_test_() ->
+    {"Start a server, send a request and then drop route.",
+     fun () ->
+            S = counter:server(),
+            Ref = make_ref(),
+            flamingo:request(S, {"/inc_with", [{"x", "42"}]}, 
+                              self(), Ref),
+            receive
+                 X ->
+                     ?assertMatch({Ref, {200, _, "42"}}, X)
+            end,
+            flamingo:request(S, {"/dec_with", [{"x", "42"}]}, 
+                              self(), Ref),
+            receive
+                 X1 ->
+                     ?assertMatch({Ref, {200, _, "0"}}, X1)
+            end,
+            flamingo:request(S, {"/inc_with", [{"x", "-42"}]}, 
+                              self(), Ref),
+            receive
+                 X2 ->
+                     ?assertMatch({Ref, {200, _, "1"}}, X2)
+            end,
+            flamingo:request(S, {"/dec_with", [{"x", "towel"}]},
+                              self(), Ref), 
+            receive
+                 X3 ->
+                     ?assertMatch({Ref, {200, _, "0"}}, X3)
+            end,
+            flamingo:request(S, {"/inc_with", [{"y", "towel"}]},
+                              self(), Ref), 
+            receive
+                 X4 ->
+                     ?assertMatch({Ref, {200, _, "1"}}, X4)
+            end,
+            flamingo:request(S, {"/dec_with", [{"xasfasd", "fdhfgsh"},{"x", "1338"}]},
+                              self(), Ref), 
+            receive
+                 X5 ->
+                     ?assertMatch({Ref, {200, _, "-1337"}}, X5)
+            end,
+            flamingo:request(S, {"m a -> (a -> m b) -> m b", [{"xasfasd", "fdhfgsh"},{"x", "1338"}]},
+                              self(), Ref), 
+            receive
+                 X6 ->
+                     ?assertMatch({Ref, {404, _, _}}, X6)
             end
      end}.
 
