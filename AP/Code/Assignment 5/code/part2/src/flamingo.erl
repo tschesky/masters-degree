@@ -1,6 +1,6 @@
 -module(flamingo).
 
--export([start/1, new_route/3, request/4, drop_route/2, get_routes/1, drop_route_by_id/2]).
+-export([start/1, new_route/3, request/4, drop_route/2, get_routes/1]).
 -import(lists, [filter/2]).
 
 handle_response(From, Ref, Routing, Env, {Path, _}=Req) -> 
@@ -79,7 +79,7 @@ start(Global) ->
 	try 
     	{ok, spawn(fun() -> loop([], Global) end)}
 	catch
-		error: e -> {error, e}
+		error: E -> {error, E}
 	end.
 
 request(Flamingo, Request, From, Ref) ->

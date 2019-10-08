@@ -53,6 +53,25 @@ mood_test_() ->
             loop_message(F, "/mood", "Happy!", 5)
      end}.
 
+latest_path_test_() ->
+    {"See if latest path is called",
+     fun() ->
+            {ok, F} = flamingo:start(latest_path),
+            {ok, Id1} = flamingo:new_route(F, ["/test"], fun(_, _) -> {200, "text/html", "test1"} end),
+            {ok, Id2} = flamingo:new_route(F, ["/test"], fun(_, _) -> {200, "text/html", "test2"} end),
+            {ok, Id3} = flamingo:new_route(F, ["/test"], fun(_, _) -> {200, "text/html", "test3"} end),
+            loop_message(F, "/test", "test3", 1),
+            flamingo:drop_route(F, Id3),
+            loop_message(F, "/test", "test2", 1),
+            flamingo:drop_route(F, Id2),
+            loop_message(F, "/test", "test1", 1),
+            flamingo:drop_route(F, Id1),
+            receive
+                X ->
+                    ?assertMatch({Ref, {404, _, _}}, X)
+            end
+     end}.
+
 drop_route_test_() ->
     {"Start a server, send a request and then drop route.",
      fun () ->
