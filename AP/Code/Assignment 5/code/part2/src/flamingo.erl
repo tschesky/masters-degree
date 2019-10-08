@@ -6,8 +6,7 @@
 handle_response(From, Ref, Routing, Env, {Path, _}=Req) -> 
 	case lookup_route(Routing, Path) of
 		none -> From ! {Ref, {404, "text/html", ""}};
-		% Add the trap_exit so the worker process can actually trap external exits called on it
-		{_,_, Action} -> spawn(fun() -> process_flag(trap_exit, true), call_action(From, Ref, Action, Req, Env) end)
+		{_,_, Action} -> spawn(fun() -> call_action(From, Ref, Action, Req, Env) end)
 	end.
 
 
@@ -20,7 +19,7 @@ call_action(From, Ref, Action, Req, Env) ->
 		 	{404, _, _} -> From ! {Ref, Res};
 		 	{500, _, _} -> From ! {Ref, Res};
 		 	_ -> From ! {Ref, {500, "text/html", ""}}
-		 end
+		end
 	catch
 		throw :  _ -> From ! {Ref, {500, "text/html", ""}};
 		error : _ -> From ! {Ref, {500, "text/html", ""}};
@@ -90,8 +89,7 @@ new_route(Flamingo, Prefixes, Action) ->
     Flamingo ! {register, self(), Prefixes, Action},
 	receive
 		{ok, Id} 		->	{ok, Id};
-		{error, Reason} -> 	{error, Reason};
-		_ -> blah
+		{error, Reason} -> 	{error, Reason}
 	end.
 		
 drop_route(Flamingo, Id) ->

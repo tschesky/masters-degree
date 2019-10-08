@@ -26,7 +26,6 @@ insert(Key, Value, {node, none, none, leaf, leaf}) -> {node, Key, Value, leaf, l
 % Cases for inserting Key higher then current key, for both when we reached the bottom and not
 insert(Key, Value, {node, K, V, L, R}) when Key > K -> {node, K, V, L, insert(Key, Value, R)};
 insert(Key, Value, {node, K, V, L, R}) when Key < K -> {node, K, V, insert(Key, Value, L), R};
-
 insert(Key, Value, leaf) -> {node, Key, Value, leaf, leaf};
 % Update value at found key
 insert(Key, Value, {node, K, _, L, R}) when Key == K -> {node, K, Value, L, R}.
@@ -37,7 +36,8 @@ lookup(Key, {node, K, _, _, leaf}) when Key > K -> none;
 lookup(Key, {node, K, _, _, R}) when Key > K -> lookup(Key, R);
 lookup(Key, {node, K, _, leaf, _}) when Key < K -> none;
 lookup(Key, {node, K, _, L, _}) when Key < K -> lookup(Key, L);
-lookup(Key, {node, K, V, _, _}) when Key == K -> {ok, V}.
+lookup(Key, {node, K, V, _, _}) when Key == K -> {ok, V};
+lookup(_, leaf) -> none.
 
 % Non-mandatory part of the warmup
 % Example of an aritmetic AST tree:

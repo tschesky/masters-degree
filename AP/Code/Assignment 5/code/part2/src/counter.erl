@@ -31,9 +31,10 @@ parse_arg(Val) -> {IntVal, Rest} = string:to_integer(Val),
 
 server() ->
     {ok, F} = flamingo:start("The Flamingo Server"),
-    Worker = spawn(fun() -> counter_loop(0) end),
     % Doesn't matter on what value Super starts, the worker is going to update him on first call anyway
-    Super = spawn(fun() -> process_flag(trap_exit, true), supervisor(Worker, 0) end),
+    Super = spawn(fun() -> process_flag(trap_exit, true), 
+    					   Worker = spawn_link(fun() -> counter_loop(0) end),
+    					   supervisor(Worker, 0) end),
 	flamingo:new_route(F, ["/inc_with"], fun(Req, Env) -> inc(Super, Req, Env) end),
 	flamingo:new_route(F, ["/dec_with"], fun(Req, Env) -> dec(Super, Req, Env) end),
 	F.
