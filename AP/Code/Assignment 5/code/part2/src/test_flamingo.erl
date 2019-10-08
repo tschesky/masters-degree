@@ -39,7 +39,7 @@ drop_route_test_() ->
      fun () ->
              {ok, F} = flamingo:start(drop_test),
              Ref = make_ref(),
-             {ok, Id} = flamingo:new_route(F, ["/sleep"], fun(_, _) -> timer:sleep(500), {200, "", "sleep"} end),
+             {ok, Id} = flamingo:new_route(F, ["/sleep"], fun(_, _) -> timer:sleep(500), _ = (10/0), {200, "", "sleep"} end),
             flamingo:request(F, {"/sleep", []},
                               self(), Ref),
             flamingo:drop_route(F, Id),
@@ -56,7 +56,7 @@ drop_route_test_() ->
             end,
             receive
                 X3 ->
-                    ?assertMatch({Ref, {200, _, _}}, X3)
+                    ?assertMatch({Ref, {500, _, _}}, X3)
             end
      end}.
 
