@@ -44,6 +44,14 @@ loop_message(F, Path, Expected, Counter) ->
             loop_message(F, Path, Expected, Counter - 1)
     end.
 
+check_error_message(F, Path) ->
+    Ref = make_ref(),
+    flamingo:request(F, {Path, []}, self(), Ref),
+    receive
+        X ->
+            ?assertMatch({Ref, {500, _, _}}, X)
+    end.
+
 mood_test_() ->
     {"Start a mood server and see if it works",
      fun() ->
@@ -51,6 +59,18 @@ mood_test_() ->
             loop_message(F, "/mood", "Sad", 5),
             loop_message(F, "/moo", "That's funny", 1),
             loop_message(F, "/mood", "Happy!", 5)
+     end}.
+
+nonsense_action_test_() ->
+    {"Test actions that return things not conforming to the expected format",
+     fun() -> 
+            {ok, F} = flamingo:start(action_test),
+            {ok, _} = flamingo:new_route(F, ["/nonsense1"], fun(_, _) -> bleep_bloop end),
+            {ok, _} = flamingo:new_route(F, ["/nonsense2"], fun(_, _) -> [1, 2, 3, 4, 5] end),
+            {ok, _} = flamingo:new_route(F, ["/nonsense3"], fun(_, _) -> {200, "text/html", "nonsense", "what?"} end),
+            check_error_message(F, "/nonsense1"),
+            check_error_message(F, "/nonsense2"),
+            check_error_message(F, "/nonsense3")
      end}.
 
 latest_path_test_() ->
@@ -66,6 +86,8 @@ latest_path_test_() ->
             flamingo:drop_route(F, Id2),
             loop_message(F, "/test", "test1", 1),
             flamingo:drop_route(F, Id1),
+            Ref = make_ref(),
+            flamingo:request(F, {"/test", []}, self(), Ref),
             receive
                 X ->
                     ?assertMatch({Ref, {404, _, _}}, X)

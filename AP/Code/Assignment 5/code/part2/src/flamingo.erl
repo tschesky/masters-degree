@@ -27,7 +27,7 @@ call_action(From, Ref, Action, Req, Env) ->
 	end.
 
 lookup_route(Routing, Path) -> 
-	Route = lists:foldl(fun(X, Longest) -> filter_path(Path, X, Longest) end, {"", none, none}, Routing),
+	Route = lists:foldr(fun(X, Longest) -> filter_path(Path, X, Longest) end, {"", none, none}, Routing),
 	case Route of
 		{"", _, _} -> none;
 		_ -> Route
@@ -48,7 +48,7 @@ add_routes(Routing, Prefixes, Action) ->
 	try
 		Id = make_ref(),
 		TmpList = [{X, Id, Action} || X <- Prefixes],
-		{ok, Id, TmpList ++ Routing}
+		{ok, Id, Routing ++ TmpList}
 	catch
 		throw: E -> {error, E};
 		error: E -> {error, E}
