@@ -2,7 +2,7 @@
 -behaviour(gen_statem).
 
 
--export([start/1, move/2, stop/0]).
+-export([start/1, move/2, stop/1]).
 -export([no_move/3, rock/3, paper/3, scissors/3]).
 -export([init/1, callback_mode/0, code_change/4, terminate/3]).
 
