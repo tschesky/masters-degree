@@ -12,8 +12,8 @@ start(State) ->
 move(Coordinator, Choice) -> 
     gen_statem:call(Coordinator, {self(), Choice}, infinity).
 
-stop() ->
-    gen_statem:terminate().
+stop(Coordinator) ->
+    gen_statem:stop(Coordinator).
 
 %%%%%%%% 
 callback_mode() ->
@@ -36,7 +36,7 @@ no_move(call, _, {{BrokerRef, CoordRef}, TargetRounds, {PidA, WinsA}, {PidB, Win
     when (WinsB >= (TargetRounds div 2)) or (WinsA >= (TargetRounds div 2)) ->
         gen_statem:reply(PidA, {game_over, WinsA, WinsB}),
         gen_statem:reply(PidB, {game_over, WinsB, WinsA}),
-        gen_server:cast(BrokerRef, {game_over, CoordRef, WinsA+WinsB}),
+        gen_server:cast(BrokerRef, {game_over, self(), CoordRef, WinsA+WinsB}),
         stop;
 
 no_move(call, {Pid, Choice}, State) ->

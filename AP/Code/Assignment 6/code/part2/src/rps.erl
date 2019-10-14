@@ -7,8 +7,8 @@ queue_up(BrokerRef, Name, Rounds) -> rps_broker:queue_up(BrokerRef, Name, Rounds
 
 move(Coordinator, Choice) -> rps_coordinator:move(Coordinator, Choice).
 
-statistics(BrokerRef) -> nope.
+statistics(BrokerRef) -> rps_broker:statistics(BrokerRef).
 
-drain(BrokerRef, Pid, Msg) ->  nope.
+drain(BrokerRef, Pid, Msg) ->  rps_broker:drain(BrokerRef, Pid, Msg).
 
 
