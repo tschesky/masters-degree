@@ -17,7 +17,7 @@ drain(BrokerRef, Pid, Msg) -> gen_server:cast(BrokerRef, {drain, Pid, Msg}).
 
 init(_) -> {ok, {#{}, [], 0}}.
 
-% Note - PidA that we get passed to the callback function is actually of form {Pid,Tag}
+% Note - PidA that we get passed to the callback function is actually of form {Pid,Tag}...
 % From gen_server documentation:
 % From is a tuple {Pid,Tag}, where Pid is the pid of the client and Tag is a unique tag.
 handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest}=State) -> 
@@ -42,6 +42,8 @@ handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest}=State) ->
 handle_call(statistics, _, {Queue, Coords, Longest}=State) -> 
     {reply, {ok, Longest, maps:size(Queue), maps:size(Coords)}, State};
 
+% This should probably be handled as a cast? Does sending a mesessage "!" count
+% towards returning from handle_call function?
 handle_call({drain, Pid, Msg}, _, {_, Coords, _}) ->
     BrokerRef = self(),
     spawn(fun() -> 
