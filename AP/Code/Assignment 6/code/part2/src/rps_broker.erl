@@ -17,12 +17,15 @@ drain(BrokerRef, Pid, Msg) -> gen_server:cast(BrokerRef, {drain, Pid, Msg}).
 
 init(_) -> {ok, {#{}, [], 0}}.
 
+% Note - PidA that we get passed to the callback function is actually of form {Pid,Tag}
+% From gen_server documentation:
+% From is a tuple {Pid,Tag}, where Pid is the pid of the client and Tag is a unique tag.
 handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest}=State) -> 
     case maps:find(Rounds, Queue) of 
         {ok, {PidB, Name2}} ->
             maps:remove(Rounds, Queue), 
             CoordRef = make_ref(),
-            case rps_coordinator:start(self(), CoordRef, PidA, PidB) of
+            case rps_coordinator:start({self(), CoordRef, Rounds, PidA, PidB}) of
                 {ok, Coord} ->
                     maps:put(Coord, CoordRef, Coords),
                     gen_server:reply(PidB, {ok, Name, Coord}),
