@@ -138,16 +138,16 @@ playerInfos(PlayerInfo) ->
 % returns tuple wiht infos for Pid and the other player, in that order!
 playerInfos(Pid, PlayerInfo) ->
     case getWinsFromPlayerInfo(PlayerInfo) of
-        {{{PidA, _}=InfoA, _}, {InfoB, _}} when PidA == Pid ->
+        {{{PidA, _} = InfoA, _}, {InfoB, _}} when PidA == Pid ->
             {InfoA, InfoB};
-        {{InfoA, _}, {{{PidB, _}=InfoB, _}}} when PidB == Pid ->
+        {{InfoA, _}, {{PidB, _}=InfoB, _}} when PidB == Pid ->
             {InfoB, InfoA}
     end.
         
     % when (WinsA > (TargetRounds div 2)) or (WinsB > (TargetRounds div 2))  ->
 
 win(Pid, {{BrokerRef, CoordRef}=Refs, {TargetRounds, CurrentRounds}, PlayerInfo}) ->
-    NewPlayerInfo =  addWin(Pid, PlayerInfo),
+    NewPlayerInfo = addWin(Pid, PlayerInfo),
     case checkGameOver(TargetRounds, NewPlayerInfo) of
         notYet ->
             {This, Other} = playerInfos(Pid, NewPlayerInfo),
