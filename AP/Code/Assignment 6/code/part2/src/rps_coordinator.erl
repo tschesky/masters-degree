@@ -19,8 +19,9 @@ stop(Coordinator) ->
 callback_mode() ->
     state_functions.
 
-init({BrokerRef, CoordRef, TargetRounds}) -> 
-    {ok, no_move, {{BrokerRef, CoordRef}, {TargetRounds, 0}, #{}}}.
+init({BrokerRef, CoordRef, TargetRounds, {PidA, _}=PlayerA, {PidB, _}=PlayerB}) ->
+    PlayerInfo = maps:put(PidB, {PlayerB, 0}, maps:put(PidA, {PlayerA, 0}, #{})),
+    {ok, no_move, {{BrokerRef, CoordRef}, {TargetRounds, 0}, PlayerInfo}}.
 
 terminate(normal, _, {_, _, PlayerInfo}) ->
     lists:map(fun({Info, _}) -> gen_statem:reply(Info, server_stopping) end, maps:values(PlayerInfo)),

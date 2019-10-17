@@ -25,7 +25,7 @@ handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest}=State) ->
         {ok, {PidB, Name2}} ->
             NewQ = maps:remove(Rounds, Queue),
             CoordRef = make_ref(),
-            case rps_coordinator:start({self(), CoordRef, Rounds}) of
+            case rps_coordinator:start({self(), CoordRef, Rounds, PidA, PidB}) of
                 {ok, Coord} ->
                     NewCoords = maps:put(Coord, CoordRef, Coords),
                     gen_server:reply(PidB, {ok, Name, Coord}),
