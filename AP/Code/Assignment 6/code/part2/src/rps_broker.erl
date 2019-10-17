@@ -15,7 +15,7 @@ drain(BrokerRef, Pid, Msg) -> gen_server:cast(BrokerRef, {drain, Pid, Msg}).
 
 %callback impls
 
-init(_) -> {ok, {#{}, [], 0}}.
+init(_) -> {ok, {#{}, #{}, 0}}.
 
 % Note - PidA that we get passed to the callback function is actually of form {Pid,Tag}...
 % From gen_server documentation:
@@ -23,13 +23,13 @@ init(_) -> {ok, {#{}, [], 0}}.
 handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest}=State) -> 
     case maps:find(Rounds, Queue) of 
         {ok, {PidB, Name2}} ->
-            maps:remove(Rounds, Queue), 
+            NewQ = maps:remove(Rounds, Queue),
             CoordRef = make_ref(),
-            case rps_coordinator:start({self(), CoordRef, Rounds, PidA, PidB}) of
+            case rps_coordinator:start({self(), CoordRef, Rounds}) of
                 {ok, Coord} ->
-                    maps:put(Coord, CoordRef, Coords),
+                    NewCoords = maps:put(Coord, CoordRef, Coords),
                     gen_server:reply(PidB, {ok, Name, Coord}),
-                    {reply, {ok, Name2, Coord}, State};
+                    {reply, {ok, Name2, Coord}, {NewQ, NewCoords, Longest}};
                 {error, Reason} -> 
                     gen_server:reply(PidB, {error, Reason}),
                     {reply, {error, Reason}, State}
@@ -40,28 +40,28 @@ handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest}=State) ->
     end;
 
 handle_call(statistics, _, {Queue, Coords, Longest}=State) -> 
-    {reply, {ok, Longest, maps:size(Queue), maps:size(Coords)}, State};
+    {reply, {ok, Longest, maps:size(Queue), maps:size(Coords)}, State}.
 
 % This should probably be handled as a cast? Does sending a mesessage "!" count
 % towards returning from handle_call function?
-handle_call({drain, Pid, Msg}, _, {_, Coords, _}) ->
+handle_cast({drain, Pid, Msg}, {_, Coords, _}) ->
     BrokerRef = self(),
     spawn(fun() -> 
         maps:map(fun(Key, _) -> rps_coordinator:stop(Key) end, Coords),
         Pid ! Msg,
         gen_server:cast(BrokerRef, drain_complete)
-    end).
+    end);
 
 handle_cast(drain_complete, _) ->
     {stop, server_drained, {}};
 
-handle_cast({game_over, From, CoordRef, GameLength}, {Q, Coords, Longest})
+handle_cast({game_over, {Coord,_}, CoordRef, GameLength}, {Q, Coords, Longest})
     when GameLength > Longest ->
-        NewCoords = removeCoord(From, Coords, CoordRef),
+        NewCoords = removeCoord(Coord, Coords, CoordRef),
         {noreply, {Q, NewCoords, GameLength}};
 
-handle_cast({game_over, From, CoordRef, _}, {Q, Coords, Longest}) ->
-        NewCoords = removeCoord(From, Coords, CoordRef),
+handle_cast({game_over, {Coord,_}, CoordRef, _}, {Q, Coords, Longest}) ->
+        NewCoords = removeCoord(Coord, Coords, CoordRef),
         {noreply, {Q, NewCoords, Longest}}.
 
 
