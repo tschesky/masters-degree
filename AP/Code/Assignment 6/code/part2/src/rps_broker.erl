@@ -55,12 +55,12 @@ handle_cast({drain, Pid, Msg}, {_, Coords, _}) ->
 handle_cast(drain_complete, _) ->
     {stop, server_drained, {}};
 
-handle_cast({game_over, {Coord,_}, CoordRef, GameLength}, {Q, Coords, Longest})
+handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest})
     when GameLength > Longest ->
         NewCoords = removeCoord(Coord, Coords, CoordRef),
         {noreply, {Q, NewCoords, GameLength}};
 
-handle_cast({game_over, {Coord,_}, CoordRef, _}, {Q, Coords, Longest}) ->
+handle_cast({game_over, Coord, CoordRef, _}, {Q, Coords, Longest}) ->
         NewCoords = removeCoord(Coord, Coords, CoordRef),
         {noreply, {Q, NewCoords, Longest}}.
 
