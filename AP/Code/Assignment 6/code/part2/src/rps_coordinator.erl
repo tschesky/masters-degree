@@ -31,18 +31,7 @@ code_change(_Vsn, State, Data, _Extra) ->
     {ok,State,Data}.
 
 %%%% State functions
-% finishing
-% no_move({call, Info}, _, {{BrokerRef, CoordRef}, -1, _, _})  ->
-%         gen_statem:reply(Info, {game_over, 0, 0}),
-%         % gen_server:cast(BrokerRef, {game_over, self(), CoordRef, WinsA+WinsB}),
-%         {next_state, no_move, lose(Pid, State)};
 
-% no_move({call,_}, _, {{BrokerRef, CoordRef}, TargetRounds, {InfoA, WinsA}, {InfoB, WinsB}}) 
-%     when (WinsB > (TargetRounds div 2)) or (WinsA > (TargetRounds div 2)) ->
-%         gen_statem:reply(InfoA, {game_over, WinsA, WinsB}),
-%         gen_statem:reply(InfoB, {game_over, WinsB, WinsA}),
-%         gen_server:cast(BrokerRef, {game_over, self(), CoordRef, WinsA+WinsB}),
-%         stop;
 no_move({call, From}, Choice, State) ->
     case Choice of
         rock ->
@@ -115,10 +104,7 @@ updateTag({Pid, _}=From, {Refs, Rounds, PlayerInfo}) ->
 addWin(Pid, PlayerInfo) ->
     maps:update_with(Pid, fun({Info, Wins}) -> {Info, Wins+1} end, PlayerInfo).
 
-%% pls don't scroll further. nothing to see down there.
-
-% we only call checkGameOver after both players have handed in their move. Thus the PlayerInfo will always contain both entries.
-% it will return either {gameOver, InfoA, WinsA, InfoB, WinsB} or {notYet, InfoA, InfoB}
+% checkGameOver will return either {gameOver, InfoA, WinsA, InfoB, WinsB} or {notYet, InfoA, InfoB}
 checkGameOver(TargetRounds, PlayerInfo) ->
     Wins = getWinsFromPlayerInfo(PlayerInfo),
     checkWins(TargetRounds, Wins).

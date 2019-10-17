@@ -44,13 +44,15 @@ handle_call(statistics, _, {Queue, Coords, Longest}=State) ->
 
 % This should probably be handled as a cast? Does sending a mesessage "!" count
 % towards returning from handle_call function?
-handle_cast({drain, Pid, Msg}, {_, Coords, _}) ->
+handle_cast({drain, Pid, Msg}, {Queue, Coords, _}=State) ->
     BrokerRef = self(),
     spawn(fun() -> 
         maps:map(fun(Key, _) -> rps_coordinator:stop(Key) end, Coords),
+        maps:map(fun(_, {Player, _}) -> gen_server:reply(Player, server_stopping) end, Queue),
         Pid ! Msg,
         gen_server:cast(BrokerRef, drain_complete)
-    end);
+    end),
+    {noreply, State};
 
 handle_cast(drain_complete, _) ->
     {stop, server_drained, {}};
