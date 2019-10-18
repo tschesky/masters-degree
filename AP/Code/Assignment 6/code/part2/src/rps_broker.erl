@@ -51,9 +51,9 @@ handle_cast({drain, Pid, Msg}, {Queue, Coords, Longest, _}) ->
     spawn(fun() ->
         maps:map(fun(Key, _) -> rps_coordinator:stop(Key) end, Coords),
         maps:map(fun(_, {Player, _}) -> gen_server:reply(Player, server_stopping) end, Queue),
-        if
-            Pid =/= none ->
-                Pid ! Msg
+        case Pid of
+            none -> ignore;
+            _ -> Pid ! Msg
         end,
         gen_server:cast(BrokerRef, drain_complete)
     end),
