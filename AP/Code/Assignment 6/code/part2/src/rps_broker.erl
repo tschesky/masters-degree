@@ -65,11 +65,11 @@ handle_cast(drain_complete, State) ->
 
 handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest, Status})
     when GameLength > Longest ->
-        NewCoords = removeCoord(Coord, Coords, CoordRef),
+        NewCoords = remove_coord(Coord, Coords, CoordRef),
         {noreply, {Q, NewCoords, GameLength, Status}};
 
 handle_cast({game_over, Coord, CoordRef, _}, {Q, Coords, Longest, Status}) ->
-        NewCoords = removeCoord(Coord, Coords, CoordRef),
+        NewCoords = remove_coord(Coord, Coords, CoordRef),
         {noreply, {Q, NewCoords, Longest, Status}}.
 
 
@@ -85,7 +85,7 @@ code_change(_Vsn, State, _Extra) ->
 
 
 % helper function to handle HIGH!!! SECURITY SECTION
-removeCoord(Coord, Coords, CoordRef) ->
+remove_coord(Coord, Coords, CoordRef) ->
     case maps:find(Coord, Coords) of
         {ok, CoordRef} ->
             maps:remove(Coord, Coords);
