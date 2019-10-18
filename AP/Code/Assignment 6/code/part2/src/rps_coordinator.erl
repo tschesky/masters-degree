@@ -2,7 +2,7 @@
 -behaviour(gen_statem).
 
 
--export([start/1, move/2, stop/1]).
+-export([start/1, move/2, stop/2]).
 -export([no_move/3, rock/3, paper/3, scissors/3, invalid/3, stopping1/3, stopping2/3]).
 -export([init/1, callback_mode/0, code_change/4, terminate/3]).
 
@@ -12,8 +12,8 @@ start(State) ->
 move(Coordinator, Choice) -> 
     gen_statem:call(Coordinator, Choice, infinity).
 
-stop(Coordinator) ->
-    gen_statem:cast(Coordinator, stopping).
+stop(Coordinator, Ref) ->
+    gen_statem:cast(Coordinator, {stopping, Ref}).
 
 %%%%%%%% 
 callback_mode() ->
@@ -60,8 +60,10 @@ no_move({call, From}, Choice, State) ->
         _ ->
             {next_state, invalid, update_tag(From, State)}
     end;
-no_move(cast, stopping, State) ->
-    {next_state, stopping2, State}.
+no_move(cast, {stopping, Ref}, {{_, Ref}, _, _}=State) ->
+    {next_state, stopping2, State};
+no_move(cast, {stopping, _}, State) ->
+    {keep_state, State}.
 
 invalid({call, {Pid, _}=From}, Choice, State) ->
     case Choice of
@@ -74,8 +76,10 @@ invalid({call, {Pid, _}=From}, Choice, State) ->
         _ -> 
             {next_state, no_move, tie(update_tag(From, State))}
     end;
-invalid(cast, stopping, State) ->
-    {next_state, stopping1, State}.
+invalid(cast, {stopping, Ref}, {{_, Ref}, _, _}=State) ->
+    {next_state, stopping1, State};
+invalid(cast, {stopping, _}, State) ->
+    {keep_state, State}.
 
 rock({call, {Pid, _}=From}, Choice, State) ->
     case Choice of
@@ -88,9 +92,10 @@ rock({call, {Pid, _}=From}, Choice, State) ->
         _ ->
             {next_state, no_move, lose(Pid, update_tag(From, State))}
     end;
-rock(cast, stopping, State) ->
-    {next_state, stopping1, State}.
-        
+rock(cast, {stopping, Ref}, {{_, Ref}, _, _}=State) ->
+    {next_state, stopping1, State};
+rock(cast, {stopping, _}, State) ->
+    {keep_state, State}.
 paper({call, {Pid, _}=From}, Choice, State) ->
         case Choice of
             rock -> 
@@ -102,8 +107,10 @@ paper({call, {Pid, _}=From}, Choice, State) ->
             _ ->
                 {next_state, no_move, lose(Pid, update_tag(From, State))}
         end;
-paper(cast, stopping, State) ->
-    {next_state, stopping1, State}.
+paper(cast, {stopping, Ref}, {{_, Ref}, _, _}=State) ->
+    {next_state, stopping1, State};
+paper(cast, {stopping, _}, State) ->
+    {keep_state, State}.
 
 scissors({call, {Pid, _}=From}, Choice, State) -> 
         case Choice of
@@ -116,9 +123,10 @@ scissors({call, {Pid, _}=From}, Choice, State) ->
             _ ->
                 {next_state, no_move, lose(Pid, update_tag(From, State))}
         end;
-scissors(cast, stopping, State) ->
-    {next_state, stopping1, State}.
-
+scissors(cast, {stopping, Ref}, {{_, Ref}, _, _}=State) ->
+    {next_state, stopping1, State};
+scissors(cast, {stopping, _}, State) ->
+    {keep_state, State}.
 
 update_tag({Pid, _}=From, {Refs, Rounds, PlayerInfo}) ->
     case maps:find(Pid, PlayerInfo) of 

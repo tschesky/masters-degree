@@ -49,7 +49,7 @@ handle_call(statistics, _, {Queue, Coords, Longest, _}=State) ->
 handle_cast({drain, Pid, Msg}, {Queue, Coords, Longest, _}) ->
     BrokerRef = self(),
     spawn(fun() ->
-        maps:map(fun(Key, _) -> rps_coordinator:stop(Key) end, Coords),
+        maps:map(fun(Coord, Ref) -> rps_coordinator:stop(Coord, Ref) end, Coords),
         maps:map(fun(_, {Player, _}) -> gen_server:reply(Player, server_stopping) end, Queue),
         gen_server:cast(BrokerRef, drain_complete),
         case Pid of
