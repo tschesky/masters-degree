@@ -3,7 +3,7 @@
 
 
 -export([start/1, move/2, stop/1]).
--export([no_move/3, rock/3, paper/3, scissors/3, invalid/3]).
+-export([no_move/3, rock/3, paper/3, scissors/3, invalid/3, stopping/3]).
 -export([init/1, callback_mode/0, code_change/4, terminate/3]).
 
 start(State) -> 
@@ -13,7 +13,7 @@ move(Coordinator, Choice) ->
     gen_statem:call(Coordinator, Choice, infinity).
 
 stop(Coordinator) ->
-    gen_statem:stop(Coordinator).
+    gen_statem:cast(Coordinator, stopping).
 
 %%%%%%%% 
 callback_mode() ->
@@ -24,13 +24,24 @@ init({BrokerRef, CoordRef, TargetRounds, {PidA, _}=PlayerA, {PidB, _}=PlayerB}) 
     {ok, no_move, {{BrokerRef, CoordRef}, {TargetRounds, 0}, PlayerInfo}}.
 
 terminate(normal, _, {_, _, PlayerInfo}) ->
-    lists:map(fun({Info, _}) -> gen_statem:reply(Info, server_stopping) end, maps:values(PlayerInfo)),
+    erlang:display(PlayerInfo),
     ok.
 
 code_change(_Vsn, State, Data, _Extra) ->
     {ok,State,Data}.
 
 %%%% State functions
+
+stopping({call, From}, _, {_, _, PlayerInfo})
+    when (map_size(PlayerInfo) == 1) ->
+        gen_statem:reply(From, server_stopping),
+        ok;
+stopping({call, {Pid, _}=From}, _, {Refs, Rounds, PlayerInfo}) ->
+    gen_statem:reply(From, server_stopping),
+    {keep_state, {Refs, Rounds, maps:remove(Pid, PlayerInfo)}};
+stopping(cast, stopping, State) ->
+    {keep_state, State}.
+
 
 no_move({call, From}, Choice, State) ->
     case Choice of
@@ -42,8 +53,10 @@ no_move({call, From}, Choice, State) ->
             {next_state, scissors, updateTag(From, State)};
         _ ->
             {next_state, invalid, updateTag(From, State)}
-    end.
-    
+    end;
+no_move(cast, stopping, State) ->
+    {next_state, stopping, State}.
+
 invalid({call, {Pid, _}=From}, Choice, State) ->
     case Choice of
         rock -> 
@@ -54,7 +67,9 @@ invalid({call, {Pid, _}=From}, Choice, State) ->
             {next_state, no_move, win(Pid, updateTag(From,State))};
         _ -> 
             {next_state, no_move, tie(updateTag(From, State))}
-    end.
+    end;
+invalid(cast, stopping, State) ->
+    {next_state, stopping, State}.
 
 rock({call, {Pid, _}=From}, Choice, State) ->
     case Choice of
@@ -66,7 +81,9 @@ rock({call, {Pid, _}=From}, Choice, State) ->
             {next_state, no_move, lose(Pid, updateTag(From, State))};
         _ ->
             {next_state, no_move, lose(Pid, updateTag(From, State))}
-    end.
+    end;
+rock(cast, stopping, State) ->
+    {next_state, stopping, State}.
         
 paper({call, {Pid, _}=From}, Choice, State) ->
         case Choice of
@@ -78,7 +95,10 @@ paper({call, {Pid, _}=From}, Choice, State) ->
                 {next_state, no_move, win(Pid, updateTag(From, State))};
             _ ->
                 {next_state, no_move, lose(Pid, updateTag(From, State))}
-        end.
+        end;
+paper(cast, stopping, State) ->
+    {next_state, stopping, State}.
+
 scissors({call, {Pid, _}=From}, Choice, State) -> 
         case Choice of
             rock -> 
@@ -89,7 +109,9 @@ scissors({call, {Pid, _}=From}, Choice, State) ->
                 {next_state, no_move, tie(updateTag(From, State))};
             _ ->
                 {next_state, no_move, lose(Pid, updateTag(From, State))}
-        end.
+        end;
+scissors(cast, stopping, State) ->
+    {next_state, stopping, State}.
 
 
 updateTag({Pid, _}=From, {Refs, Rounds, PlayerInfo}) ->
@@ -145,7 +167,7 @@ win(Pid, {{BrokerRef, CoordRef}=Refs, {TargetRounds, CurrentRounds}, PlayerInfo}
             gen_statem:reply(InfoA, {game_over, WinsA, WinsB}),
             gen_statem:reply(InfoB, {game_over, WinsB, WinsA}),
             gen_server:cast(BrokerRef, {game_over, self(), CoordRef, CurrentRounds+1}),
-            stop
+            {stop, normal, {none, none, #{}}}
     end.
 
 lose(Pid, {{BrokerRef, CoordRef}=Refs, {TargetRounds, CurrentRounds}, PlayerInfo}) ->
@@ -160,7 +182,7 @@ lose(Pid, {{BrokerRef, CoordRef}=Refs, {TargetRounds, CurrentRounds}, PlayerInfo
             gen_statem:reply(InfoA, {game_over, WinsA, WinsB}),
             gen_statem:reply(InfoB, {game_over, WinsB, WinsA}),
             gen_server:cast(BrokerRef, {game_over, self(), CoordRef, CurrentRounds+1}),
-            stop
+            {stop, normal, {none, none, #{}}}
     end.
 
 

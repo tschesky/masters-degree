@@ -40,7 +40,7 @@ start_broker_setup() ->
 stop_broker_teardown({ok, BrokerRef}) ->
 	rps:drain(BrokerRef, self(), "Stop!"),
 	receive
-		_ -> ok
+		"Stop!" -> ok
 	end,
 	timer:sleep(10).
 
@@ -117,6 +117,10 @@ broker_handle_drain() ->
      	PidB = list_to_pid("<0.20.0>"),
      	rps_broker:handle_cast({drain, self(), "STOP! HAMMER TIME!"},
 							   {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 10, running}),
+		receive
+     		Y ->
+     			?assertMatch({'$gen_cast', drain_complete}, Y)
+     	end,
 		receive
      		X ->
      			?assertMatch("STOP! HAMMER TIME!", X)
