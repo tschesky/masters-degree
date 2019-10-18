@@ -51,13 +51,16 @@ handle_cast({drain, Pid, Msg}, {Queue, Coords, Longest, _}) ->
     spawn(fun() ->
         maps:map(fun(Key, _) -> rps_coordinator:stop(Key) end, Coords),
         maps:map(fun(_, {Player, _}) -> gen_server:reply(Player, server_stopping) end, Queue),
-        Pid ! Msg,
+        if
+            Pid =/= none ->
+                Pid ! Msg
+        end,
         gen_server:cast(BrokerRef, drain_complete)
     end),
     {noreply, {Queue, Coords, Longest, draining}};
 
 handle_cast(drain_complete, _) ->
-    {stop, server_drained, {}};
+    gen_server:stop(self(), {stop, server_drained, {}});
 
 handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest, _})
     when GameLength > Longest ->

@@ -8,8 +8,7 @@
 test_all() ->
     eunit:test(
       [
-       start_broker(),
-       start_coordinator(),
+       broker_fixture(),
        broker_handle_queue_up_game_found(),
        broker_handle_statistics(),
        broker_handle_drain(),
@@ -20,24 +19,72 @@ test_all() ->
        coordinator_handle_rock_paper(),
        coordinator_handle_rock_scissors(),
        coordinator_handle_rock_rock(),
-       coordinator_handle_rock_invalid()
+       coordinator_handle_rock_invalid(),
+       coordinator_handle_paper_paper(),
+       coordinator_handle_paper_scissors(),
+       coordinator_handle_paper_rock(),
+       coordinator_handle_paper_invalid(),
+       coordinator_handle_scissors_paper(),
+       coordinator_handle_scissors_rock(),
+       coordinator_handle_scissors_scissors(),
+       coordinator_handle_scissors_invalid(),
+       coordinator_handle_invalid_paper(),
+       coordinator_handle_invalid_scissors(),
+       coordinator_handle_invalid_rock(),
+       coordinator_handle_invalid_invalid()
       ], [verbose]).
 
+start_broker_setup() ->
+	rps:start().
 
-start_broker() ->
-    {"Start a broker, and nothing else",
-     fun() ->
-             ?assertMatch({ok, _}, rps:start())
-     end}.
+% WHYYYYYYYYYYYYYYYYYYYYYYYYYYyy
+stop_broker_teardown({ok, BrokerRef}) ->
+	rps:drain(BrokerRef, none, "Stop!"),
+	timer:sleep(10).
 
-start_coordinator() ->
-    {"Start a coordinator, and nothing else",
-     fun() ->
-     	PidA = list_to_pid("<0.10.0>"),
-     	PidB = list_to_pid("<0.20.0>"),
-     	PidC = list_to_pid("<0.30.0>"),
-        ?assertMatch({ok, _}, rps_coordinator:start({PidA, make_ref(), 10, {PidB, "bob"}, {PidC, "alice"}}))
-     end}.
+broker_fixture() ->
+	{
+		foreach,
+		fun start_broker_setup/0,
+		fun stop_broker_teardown/1,
+		[fun move_broker/1,
+		 fun game_broker/1]
+	}.
+
+move_broker({ok, BrokerRef}) ->
+	{"Issue a move to RPS broker",
+	 fun() ->
+	 	spawn(fun() ->
+	 			{ok, _, Coord1} = rps:queue_up(BrokerRef, "Bob", 10),
+	 			?assertMatch(round_lost, rps:move(Coord1, rock))
+	 		  end),
+	 	timer:sleep(10),
+	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "Alice", 10),
+	 	?assertMatch(round_won, rps:move(Coord2, paper))
+	 end
+	}.
+
+game_broker({ok, BrokerRef}) ->
+	{"Issue a game to RPS broker",
+	 fun() ->
+	 	spawn(fun() ->
+	 			{ok, _, Coord1} = rps:queue_up(BrokerRef, "Bob", 1),
+	 			?assertMatch({game_over, 0, 1}, rps:move(Coord1, rock))
+	 		  end),
+	 	timer:sleep(10),
+	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "Alice", 1),
+	 	?assertMatch({game_over, 1, 0}, rps:move(Coord2, paper))
+	 end
+	}.
+
+% start_coordinator() ->
+%     {"Start a coordinator, and nothing else",
+%      fun() ->
+%      	PidA = list_to_pid("<0.10.0>"),
+%      	PidB = list_to_pid("<0.20.0>"),
+%      	PidC = list_to_pid("<0.30.0>"),
+%         ?assertMatch({ok, _}, rps_coordinator:start({PidA, make_ref(), 10, {PidB, "bob"}, {PidC, "alice"}}))
+%      end}.
 
 broker_handle_queue_up_game_found() ->
     {"Handle queue up message in RPS broker",
@@ -46,7 +93,7 @@ broker_handle_queue_up_game_found() ->
      	PidB = list_to_pid("<0.20.0>"),
      	Resp = rps_broker:handle_call({q_up, "Bob", 4},
      								  {PidA, "bob"},
-     								  {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 0}),
+     								  {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 0, running}),
      	?assertMatch({reply, {ok, "Alice", _}, _}, Resp)
      end}.
 
@@ -57,7 +104,7 @@ broker_handle_statistics() ->
      	PidB = list_to_pid("<0.20.0>"),
      	Resp = rps_broker:handle_call(statistics,
      								  {PidA, "bob"},
-     								  {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 10}),
+     								  {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 10, running}),
      	?assertMatch({reply, {ok, 10, 1, 0}, _}, Resp)
      end}.
 
@@ -66,13 +113,15 @@ broker_handle_drain() ->
      fun() ->
      	PidB = list_to_pid("<0.20.0>"),
      	rps_broker:handle_cast({drain, self(), "STOP! HAMMER TIME!"},
-							   {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 10}),
+							   {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 10, running}),
      	receive
      		X ->
      			?assertMatch("STOP! HAMMER TIME!", X)
      	end
      end}.
 
+
+% Dumb state-by-state unit tests
 coordinator_handle_no_move_rock() ->
     {"Handle rock input in no_move state in RPS coordinator",
      fun() ->
@@ -134,6 +183,102 @@ coordinator_handle_rock_invalid() ->
      fun() ->
      	{PidB, State, ExpState} = move_test_setup_loose(),
      	Res = rps_coordinator:rock({call, {PidB, "alice"}}, invalid, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_paper_paper() ->
+    {"Handle paper input in paper state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_tie(),
+     	Res = rps_coordinator:paper({call, {PidB, "alice"}}, paper, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_paper_scissors() ->
+    {"Handle scissors input in paper state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_win(),
+     	Res = rps_coordinator:paper({call, {PidB, "alice"}}, scissors, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_paper_rock() ->
+    {"Handle rock input in paper state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_loose(),
+     	Res = rps_coordinator:paper({call, {PidB, "alice"}}, rock, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_paper_invalid() ->
+    {"Handle invalid input in paper state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_loose(),
+     	Res = rps_coordinator:paper({call, {PidB, "alice"}}, invalid, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_scissors_paper() ->
+    {"Handle paper input in scissors state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_loose(),
+     	Res = rps_coordinator:scissors({call, {PidB, "alice"}}, paper, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_scissors_scissors() ->
+    {"Handle scissors input in scissors state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_tie(),
+     	Res = rps_coordinator:scissors({call, {PidB, "alice"}}, scissors, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_scissors_rock() ->
+    {"Handle rock input in scissors state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_win(),
+     	Res = rps_coordinator:scissors({call, {PidB, "alice"}}, rock, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_scissors_invalid() ->
+    {"Handle invalid input in scissors state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_loose(),
+     	Res = rps_coordinator:scissors({call, {PidB, "alice"}}, invalid, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_invalid_paper() ->
+    {"Handle paper input in invalid state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_win(),
+     	Res = rps_coordinator:invalid({call, {PidB, "alice"}}, paper, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_invalid_scissors() ->
+    {"Handle scissors input in invalid state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_win(),
+     	Res = rps_coordinator:invalid({call, {PidB, "alice"}}, scissors, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_invalid_rock() ->
+    {"Handle rock input in invalid state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_win(),
+     	Res = rps_coordinator:invalid({call, {PidB, "alice"}}, rock, State),
+     	?assertMatch({next_state, no_move, ExpState}, Res)
+     end}.
+
+coordinator_handle_invalid_invalid() ->
+    {"Handle invalid input in invalid state in RPS coordinator",
+     fun() ->
+     	{PidB, State, ExpState} = move_test_setup_tie(),
+     	Res = rps_coordinator:invalid({call, {PidB, "alice"}}, invalid, State),
      	?assertMatch({next_state, no_move, ExpState}, Res)
      end}.
 
