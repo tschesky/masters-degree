@@ -37,14 +37,17 @@ test_all() ->
 start_broker_setup() ->
 	rps:start().
 
-% WHYYYYYYYYYYYYYYYYYYYYYYYYYYyy
 stop_broker_teardown({ok, BrokerRef}) ->
-	rps:drain(BrokerRef, none, "Stop!"),
+	rps:drain(BrokerRef, self(), "Stop!"),
+	receive
+		_ -> ok
+	end,
 	timer:sleep(10).
 
 broker_fixture() ->
 	{
 		foreach,
+		local,
 		fun start_broker_setup/0,
 		fun stop_broker_teardown/1,
 		[fun move_broker/1,
@@ -114,7 +117,7 @@ broker_handle_drain() ->
      	PidB = list_to_pid("<0.20.0>"),
      	rps_broker:handle_cast({drain, self(), "STOP! HAMMER TIME!"},
 							   {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 10, running}),
-     	receive
+		receive
      		X ->
      			?assertMatch("STOP! HAMMER TIME!", X)
      	end

@@ -51,21 +51,22 @@ handle_cast({drain, Pid, Msg}, {Queue, Coords, Longest, _}) ->
     spawn(fun() ->
         maps:map(fun(Key, _) -> rps_coordinator:stop(Key) end, Coords),
         maps:map(fun(_, {Player, _}) -> gen_server:reply(Player, server_stopping) end, Queue),
+        gen_server:cast(BrokerRef, drain_complete),
         case Pid of
             none -> ignore;
             _ -> Pid ! Msg
-        end,
-        gen_server:cast(BrokerRef, drain_complete)
+        end
     end),
     {noreply, {Queue, Coords, Longest, draining}};
 
-handle_cast(drain_complete, _) ->
-    gen_server:stop(self(), {stop, server_drained, {}});
+handle_cast(drain_complete, State) ->
+    unregister(rps),
+    {stop, normal, State};
 
-handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest, _})
+handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest, Status})
     when GameLength > Longest ->
         NewCoords = removeCoord(Coord, Coords, CoordRef),
-        {noreply, {Q, NewCoords, GameLength}};
+        {noreply, {Q, NewCoords, GameLength, Status}};
 
 handle_cast({game_over, Coord, CoordRef, _}, {Q, Coords, Longest, Status}) ->
         NewCoords = removeCoord(Coord, Coords, CoordRef),
