@@ -37,12 +37,13 @@ test_all() ->
 start_broker_setup() ->
 	rps:start().
 
-stop_broker_teardown({ok, BrokerRef}) ->
-	rps:drain(BrokerRef, self(), "Stop!"),
-	receive
-		"Stop!" -> ok
-	end,
-	timer:sleep(10).
+stop_broker_teardown({ok, _}) ->
+	% rps:drain(BrokerRef, self(), "Stop!"),
+	% receive
+	% 	"Stop!" -> ok
+	% end,
+	% timer:sleep(10)
+	ok.
 
 broker_fixture() ->
 	{
@@ -59,11 +60,19 @@ move_broker({ok, BrokerRef}) ->
 	 fun() ->
 	 	spawn(fun() ->
 	 			{ok, _, Coord1} = rps:queue_up(BrokerRef, "Bob", 10),
-	 			?assertMatch(round_lost, rps:move(Coord1, rock))
+	 			?assertMatch(round_lost, rps:move(Coord1, rock)),
+				?assertMatch(server_stopping, rps:move(Coord1, rock))
 	 		  end),
 	 	timer:sleep(10),
 	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "Alice", 10),
-	 	?assertMatch(round_won, rps:move(Coord2, paper))
+	 	?assertMatch(round_won, rps:move(Coord2, paper)),
+		rps:drain(BrokerRef, self(), "Stop!"),
+		timer:sleep(20),
+		?assertMatch(server_stopping, rps:move(Coord2, paper)),
+		receive
+			"Stop!" -> ok
+		end,
+		timer:sleep(10)
 	 end
 	}.
 
@@ -71,12 +80,27 @@ game_broker({ok, BrokerRef}) ->
 	{"Issue a game to RPS broker",
 	 fun() ->
 	 	spawn(fun() ->
-	 			{ok, _, Coord1} = rps:queue_up(BrokerRef, "Bob", 1),
-	 			?assertMatch({game_over, 0, 1}, rps:move(Coord1, rock))
+	 			{ok, _, Coord1} = rps:queue_up(BrokerRef, "Bob", 6),
+	 			?assertMatch(round_lost, rps:move(Coord1, rock)),
+				?assertMatch(round_won, rps:move(Coord1, rock)),
+				% ?assertMatch(round_lost, rps:move(Coord1, lizard)),
+				?assertMatch(round_lost, rps:move(Coord1, rock)),
+				?assertMatch(tie, rps:move(Coord1, paper)),
+				?assertMatch(round_lost, rps:move(Coord1, scissors)),
+				?assertMatch({game_over, 1, 4}, rps:move(Coord1, paper))
 	 		  end),
 	 	timer:sleep(10),
-	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "Alice", 1),
-	 	?assertMatch({game_over, 1, 0}, rps:move(Coord2, paper))
+	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "Alice", 6),
+	 	?assertMatch(round_won, rps:move(Coord2, paper)),
+		?assertMatch(round_lost, rps:move(Coord2, scissors)),
+		?assertMatch(round_won, rps:move(Coord2, paper)),
+		?assertMatch(tie, rps:move(Coord2, paper)),
+		?assertMatch(round_won, rps:move(Coord2, rock)),
+		?assertMatch({game_over, 4, 1}, rps:move(Coord2, scissors)),
+		rps:drain(BrokerRef, self(), "Stop!"),
+		receive
+			"Stop!" -> ok
+		end
 	 end
 	}.
 
@@ -119,7 +143,7 @@ broker_handle_drain() ->
 							   {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 10, running}),
 		receive
      		Y ->
-     			?assertMatch({'$gen_cast', drain_complete}, Y)
+     			?assertMatch({_, drain_complete}, Y)
      	end,
 		receive
      		X ->

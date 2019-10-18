@@ -4,7 +4,7 @@
 -behaviour(gen_server).
 
 
-start() -> gen_server:start({local, rps}, ?MODULE, [], []).
+start() -> gen_server:start(?MODULE, [], []).
 
 queue_up(BrokerRef, Name, Rounds) -> gen_server:call(BrokerRef, {q_up, Name, Rounds}, infinity).
 
@@ -60,7 +60,7 @@ handle_cast({drain, Pid, Msg}, {Queue, Coords, Longest, _}) ->
     {noreply, {Queue, Coords, Longest, draining}};
 
 handle_cast(drain_complete, State) ->
-    unregister(rps),
+    % unregister(rps),
     {stop, normal, State};
 
 handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest, Status})

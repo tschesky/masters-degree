@@ -3,7 +3,7 @@
 
 
 -export([start/1, move/2, stop/1]).
--export([no_move/3, rock/3, paper/3, scissors/3, invalid/3, stopping/3]).
+-export([no_move/3, rock/3, paper/3, scissors/3, invalid/3, stopping1/3, stopping2/3]).
 -export([init/1, callback_mode/0, code_change/4, terminate/3]).
 
 start(State) -> 
@@ -23,8 +23,7 @@ init({BrokerRef, CoordRef, TargetRounds, {PidA, _}=PlayerA, {PidB, _}=PlayerB}) 
     PlayerInfo = maps:put(PidB, {PlayerB, 0}, maps:put(PidA, {PlayerA, 0}, #{})),
     {ok, no_move, {{BrokerRef, CoordRef}, {TargetRounds, 0}, PlayerInfo}}.
 
-terminate(normal, _, {_, _, PlayerInfo}) ->
-    erlang:display(PlayerInfo),
+terminate(_, _, _) ->
     ok.
 
 code_change(_Vsn, State, Data, _Extra) ->
@@ -32,14 +31,21 @@ code_change(_Vsn, State, Data, _Extra) ->
 
 %%%% State functions
 
-stopping({call, From}, _, {_, _, PlayerInfo})
-    when (map_size(PlayerInfo) == 1) ->
-        gen_statem:reply(From, server_stopping),
-        ok;
-stopping({call, {Pid, _}=From}, _, {Refs, Rounds, PlayerInfo}) ->
-    gen_statem:reply(From, server_stopping),
-    {keep_state, {Refs, Rounds, maps:remove(Pid, PlayerInfo)}};
-stopping(cast, stopping, State) ->
+% stopping({call, From}, _, {_, _, PlayerInfo})
+%     when (map_size(PlayerInfo) == 1) ->
+%         gen_statem:reply(From, server_stopping),
+%         ok;
+stopping1({call, From}, _, State) ->
+    {_,_, NewPlayerInfo} = updateTag(From, State),
+    maps:map(fun(_, {Info, _}) -> gen_statem:reply(Info, server_stopping) end, NewPlayerInfo),
+    timer:sleep(10),
+    {stop, normal};
+stopping1(cast, stopping, State) ->
+    {keep_state, State}.
+
+stopping2({call, From}, _, State) ->
+    {next_state, stopping1, updateTag(From, State)};
+stopping2(cast, stopping, State) ->
     {keep_state, State}.
 
 
@@ -55,7 +61,7 @@ no_move({call, From}, Choice, State) ->
             {next_state, invalid, updateTag(From, State)}
     end;
 no_move(cast, stopping, State) ->
-    {next_state, stopping, State}.
+    {next_state, stopping2, State}.
 
 invalid({call, {Pid, _}=From}, Choice, State) ->
     case Choice of
@@ -69,7 +75,7 @@ invalid({call, {Pid, _}=From}, Choice, State) ->
             {next_state, no_move, tie(updateTag(From, State))}
     end;
 invalid(cast, stopping, State) ->
-    {next_state, stopping, State}.
+    {next_state, stopping1, State}.
 
 rock({call, {Pid, _}=From}, Choice, State) ->
     case Choice of
@@ -83,7 +89,7 @@ rock({call, {Pid, _}=From}, Choice, State) ->
             {next_state, no_move, lose(Pid, updateTag(From, State))}
     end;
 rock(cast, stopping, State) ->
-    {next_state, stopping, State}.
+    {next_state, stopping1, State}.
         
 paper({call, {Pid, _}=From}, Choice, State) ->
         case Choice of
@@ -97,7 +103,7 @@ paper({call, {Pid, _}=From}, Choice, State) ->
                 {next_state, no_move, lose(Pid, updateTag(From, State))}
         end;
 paper(cast, stopping, State) ->
-    {next_state, stopping, State}.
+    {next_state, stopping1, State}.
 
 scissors({call, {Pid, _}=From}, Choice, State) -> 
         case Choice of
@@ -111,7 +117,7 @@ scissors({call, {Pid, _}=From}, Choice, State) ->
                 {next_state, no_move, lose(Pid, updateTag(From, State))}
         end;
 scissors(cast, stopping, State) ->
-    {next_state, stopping, State}.
+    {next_state, stopping1, State}.
 
 
 updateTag({Pid, _}=From, {Refs, Rounds, PlayerInfo}) ->
