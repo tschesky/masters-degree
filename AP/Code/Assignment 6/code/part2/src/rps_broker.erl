@@ -15,13 +15,15 @@ drain(BrokerRef, Pid, Msg) -> gen_server:cast(BrokerRef, {drain, Pid, Msg}).
 
 %callback impls
 
-init(_) -> {ok, {#{}, #{}, 0}}.
+init(_) -> {ok, {#{}, #{}, 0, running}}.
 
 % Note - PidA that we get passed to the callback function is actually of form {Pid,Tag}...
 % From gen_server documentation:
 % From is a tuple {Pid,Tag}, where Pid is the pid of the client and Tag is a unique tag.
-handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest}=State) -> 
-    case maps:find(Rounds, Queue) of 
+handle_call({q_up, _, _}, _, {_, _, _, draining}=State) ->
+    {reply, server_stopping, State};
+handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest, Status}=State) ->
+    case maps:find(Rounds, Queue) of
         {ok, {PidB, Name2}} ->
             NewQ = maps:remove(Rounds, Queue),
             CoordRef = make_ref(),
@@ -29,42 +31,42 @@ handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest}=State) ->
                 {ok, Coord} ->
                     NewCoords = maps:put(Coord, CoordRef, Coords),
                     gen_server:reply(PidB, {ok, Name, Coord}),
-                    {reply, {ok, Name2, Coord}, {NewQ, NewCoords, Longest}};
-                {error, Reason} -> 
+                    {reply, {ok, Name2, Coord}, {NewQ, NewCoords, Longest, Status}};
+                {error, Reason} ->
                     gen_server:reply(PidB, {error, Reason}),
                     {reply, {error, Reason}, State}
             end;
         _ ->
             NewQ = maps:put(Rounds, {PidA, Name}, Queue),
-            {noreply, {NewQ, Coords, Longest}}
+            {noreply, {NewQ, Coords, Longest, Status}}
     end;
 
-handle_call(statistics, _, {Queue, Coords, Longest}=State) -> 
+handle_call(statistics, _, {Queue, Coords, Longest, _}=State) ->
     {reply, {ok, Longest, maps:size(Queue), maps:size(Coords)}, State}.
 
 % This should probably be handled as a cast? Does sending a mesessage "!" count
 % towards returning from handle_call function?
-handle_cast({drain, Pid, Msg}, {Queue, Coords, _}=State) ->
+handle_cast({drain, Pid, Msg}, {Queue, Coords, Longest, _}) ->
     BrokerRef = self(),
-    spawn(fun() -> 
+    spawn(fun() ->
         maps:map(fun(Key, _) -> rps_coordinator:stop(Key) end, Coords),
         maps:map(fun(_, {Player, _}) -> gen_server:reply(Player, server_stopping) end, Queue),
         Pid ! Msg,
         gen_server:cast(BrokerRef, drain_complete)
     end),
-    {noreply, State};
+    {noreply, {Queue, Coords, Longest, draining}};
 
 handle_cast(drain_complete, _) ->
     {stop, server_drained, {}};
 
-handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest})
+handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest, _})
     when GameLength > Longest ->
         NewCoords = removeCoord(Coord, Coords, CoordRef),
         {noreply, {Q, NewCoords, GameLength}};
 
-handle_cast({game_over, Coord, CoordRef, _}, {Q, Coords, Longest}) ->
+handle_cast({game_over, Coord, CoordRef, _}, {Q, Coords, Longest, Status}) ->
         NewCoords = removeCoord(Coord, Coords, CoordRef),
-        {noreply, {Q, NewCoords, Longest}}.
+        {noreply, {Q, NewCoords, Longest, Status}}.
 
 
 
@@ -83,6 +85,6 @@ removeCoord(Coord, Coords, CoordRef) ->
     case maps:find(Coord, Coords) of
         {ok, CoordRef} ->
             maps:remove(Coord, Coords);
-        _ -> 
+        _ ->
            Coords
     end.
