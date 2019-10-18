@@ -58,6 +58,9 @@ broker_fixture() ->
 move_broker({ok, BrokerRef}) ->
 	{"Issue a move to RPS broker",
 	 fun() ->
+		spawn(fun() ->
+	 			rps:queue_up(BrokerRef, "Ken", 1337)
+	 		  end),
 	 	spawn(fun() ->
 	 			{ok, _, Coord1} = rps:queue_up(BrokerRef, "Bob", 10),
 	 			?assertMatch(round_lost, rps:move(Coord1, rock)),
@@ -66,6 +69,7 @@ move_broker({ok, BrokerRef}) ->
 	 	timer:sleep(10),
 	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "Alice", 10),
 	 	?assertMatch(round_won, rps:move(Coord2, paper)),
+		?assertMatch({ok, 0, 1, 1}, rps:statistics(BrokerRef)),
 		rps:drain(BrokerRef, self(), "Stop!"),
 		timer:sleep(20),
 		?assertMatch(server_stopping, rps:move(Coord2, paper)),
@@ -97,6 +101,7 @@ game_broker({ok, BrokerRef}) ->
 		?assertMatch(tie, rps:move(Coord2, paper)),
 		?assertMatch(round_won, rps:move(Coord2, rock)),
 		?assertMatch({game_over, 4, 1}, rps:move(Coord2, scissors)),
+		?assertMatch({ok, 6, 0, 0}, rps:statistics(BrokerRef)),
 		rps:drain(BrokerRef, self(), "Stop!"),
 		receive
 			"Stop!" -> ok
