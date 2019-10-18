@@ -52,7 +52,8 @@ broker_fixture() ->
 		fun start_broker_setup/0,
 		fun stop_broker_teardown/1,
 		[fun move_broker/1,
-		 fun game_broker/1]
+		 fun game_broker/1,
+		 fun best_of_0/1]
 	}.
 
 move_broker({ok, BrokerRef}) ->
@@ -108,6 +109,27 @@ game_broker({ok, BrokerRef}) ->
 		end
 	 end
 	}.
+
+best_of_0({ok, BrokerRef}) ->
+	{"Issue a game to RPS broker",
+	 fun() ->
+	 	spawn(fun() ->
+	 			{ok, _, Coord1} = rps:queue_up(BrokerRef, "ThisGuy", 0),
+	 			?assertMatch(tie, rps:move(Coord1, someWeirdSign)),
+				?assertMatch({game_over, 0, 1}, rps:move(Coord1, paper))
+	 		  end),
+	 	timer:sleep(10),
+	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "ThatGuy", 0),
+	 	?assertMatch(tie, rps:move(Coord2, theAlmightySpock)),
+		?assertMatch({game_over, 1, 0}, rps:move(Coord2, scissors)),
+		?assertMatch({ok, 2, 0, 0}, rps:statistics(BrokerRef)),
+		rps:drain(BrokerRef, self(), "Stop!"),
+		receive
+			"Stop!" -> ok
+		end
+	 end
+	}.
+
 
 % start_coordinator() ->
 %     {"Start a coordinator, and nothing else",
