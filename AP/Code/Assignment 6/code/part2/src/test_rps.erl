@@ -40,9 +40,12 @@ start_broker_setup() ->
 stop_broker_teardown({ok, BrokerRef}) ->
 	rps:drain(BrokerRef, self(), "Stop!"),
 	receive
-		_ -> ok
-	end,
-	timer:sleep(10).
+		X -> ?assertMatch("Stop!", X)
+	end.
+
+% stop_broker_teardown({ok, BrokerRef}) ->
+% 	rps:drain(BrokerRef, none, "Stop!"),
+% 	timer:sleep(10).
 
 broker_fixture() ->
 	{
@@ -51,7 +54,8 @@ broker_fixture() ->
 		fun start_broker_setup/0,
 		fun stop_broker_teardown/1,
 		[fun move_broker/1,
-		 fun game_broker/1]
+		 fun game_broker/1,
+		 fun statistics_broker/1]
 	}.
 
 move_broker({ok, BrokerRef}) ->
@@ -63,7 +67,8 @@ move_broker({ok, BrokerRef}) ->
 	 		  end),
 	 	timer:sleep(10),
 	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "Alice", 10),
-	 	?assertMatch(round_won, rps:move(Coord2, paper))
+	 	?assertMatch(round_won, rps:move(Coord2, paper)),
+	 	?assertMatch({ok, 0, 0, 1}, rps:statistics(BrokerRef))
 	 end
 	}.
 
@@ -76,7 +81,15 @@ game_broker({ok, BrokerRef}) ->
 	 		  end),
 	 	timer:sleep(10),
 	 	{ok, _, Coord2} = rps:queue_up(BrokerRef, "Alice", 1),
-	 	?assertMatch({game_over, 1, 0}, rps:move(Coord2, paper))
+	 	?assertMatch({game_over, 1, 0}, rps:move(Coord2, paper)),
+	 	?assertMatch({ok, 1, 0, 0}, rps:statistics(BrokerRef))
+	 end
+	}.
+
+statistics_broker({ok, BrokerRef}) ->
+	{"Issue a statistics command to RPS broker",
+	 fun() ->
+	 	?assertMatch({ok, 0, 0, 0}, rps:statistics(BrokerRef))
 	 end
 	}.
 
@@ -114,12 +127,17 @@ broker_handle_statistics() ->
 broker_handle_drain() ->
     {"Handle drain message in RPS broker",
      fun() ->
-     	PidB = list_to_pid("<0.20.0>"),
      	rps_broker:handle_cast({drain, self(), "STOP! HAMMER TIME!"},
-							   {#{4 => {{PidB, "alice"}, "Alice"}}, #{}, 10, running}),
+							   {#{}, #{}, 10, running}),
+
+     	% We manually call that stuff, which causes self() in our handle cast to be 
+     	% the test process, which means that we need to manually catch teh drain_complete
+     	receive
+     		X2 -> ?assertMatch({_, drain_complete}, X2)
+     	end,
+
 		receive
-     		X ->
-     			?assertMatch("STOP! HAMMER TIME!", X)
+     		X -> ?assertMatch("STOP! HAMMER TIME!", X)
      	end
      end}.
 

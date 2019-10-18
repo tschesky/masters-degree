@@ -3,7 +3,7 @@
 
 
 -export([start/1, move/2, stop/1]).
--export([no_move/3, rock/3, paper/3, scissors/3, invalid/3]).
+-export([no_move/3, rock/3, paper/3, scissors/3, invalid/3, stopping/3]).
 -export([init/1, callback_mode/0, code_change/4, terminate/3]).
 
 start(State) -> 
@@ -23,8 +23,8 @@ init({BrokerRef, CoordRef, TargetRounds, {PidA, _}=PlayerA, {PidB, _}=PlayerB}) 
     PlayerInfo = maps:put(PidB, {PlayerB, 0}, maps:put(PidA, {PlayerA, 0}, #{})),
     {ok, no_move, {{BrokerRef, CoordRef}, {TargetRounds, 0}, PlayerInfo}}.
 
-terminate(normal, _, {_, _, PlayerInfo}) ->
-    lists:map(fun({Info, _}) -> gen_statem:reply(Info, server_stopping) end, maps:values(PlayerInfo)),
+terminate(normal, _, {_, _, _}) ->
+    %lists:map(fun({Info, _}) -> gen_statem:reply(Info, server_stopping) end, maps:values(PlayerInfo)),
     ok.
 
 code_change(_Vsn, State, Data, _Extra) ->
@@ -32,7 +32,7 @@ code_change(_Vsn, State, Data, _Extra) ->
 
 %%%% State functions
 
-no_move({call, From}, Choice, State) ->
+no_move({_, From}, Choice, State) ->
     case Choice of
         rock ->
             {next_state, rock, updateTag(From, State)};
@@ -40,11 +40,13 @@ no_move({call, From}, Choice, State) ->
             {next_state, paper, updateTag(From, State)};
         scissors ->
             {next_state, scissors, updateTag(From, State)};
+        stopping ->
+            {next_state, stopping, State};
         _ ->
             {next_state, invalid, updateTag(From, State)}
     end.
     
-invalid({call, {Pid, _}=From}, Choice, State) ->
+invalid({_, {Pid, _}=From}, Choice, State) ->
     case Choice of
         rock -> 
             {next_state, no_move, win(Pid, updateTag(From,State))};
@@ -52,11 +54,13 @@ invalid({call, {Pid, _}=From}, Choice, State) ->
             {next_state, no_move, win(Pid, updateTag(From,State))};
         scissors ->
             {next_state, no_move, win(Pid, updateTag(From,State))};
+        stopping ->
+            {next_state, stopping, State};
         _ -> 
             {next_state, no_move, tie(updateTag(From, State))}
     end.
 
-rock({call, {Pid, _}=From}, Choice, State) ->
+rock({_, {Pid, _}=From}, Choice, State) ->
     case Choice of
         rock -> 
             {next_state, no_move, tie(updateTag(From, State))};
@@ -64,11 +68,13 @@ rock({call, {Pid, _}=From}, Choice, State) ->
             {next_state, no_move, win(Pid, updateTag(From,State))};
         scissors ->
             {next_state, no_move, lose(Pid, updateTag(From, State))};
+        stopping ->
+            {next_state, stopping, State};
         _ ->
             {next_state, no_move, lose(Pid, updateTag(From, State))}
     end.
         
-paper({call, {Pid, _}=From}, Choice, State) ->
+paper({_, {Pid, _}=From}, Choice, State) ->
         case Choice of
             rock -> 
                 {next_state, no_move, lose(Pid, updateTag(From, State))};
@@ -76,10 +82,12 @@ paper({call, {Pid, _}=From}, Choice, State) ->
                 {next_state, no_move, tie(updateTag(From, State))};
             scissors ->
                 {next_state, no_move, win(Pid, updateTag(From, State))};
+            stopping ->
+                {next_state, stopping, State};
             _ ->
                 {next_state, no_move, lose(Pid, updateTag(From, State))}
         end.
-scissors({call, {Pid, _}=From}, Choice, State) -> 
+scissors({_, {Pid, _}=From}, Choice, State) -> 
         case Choice of
             rock -> 
                 {next_state, no_move, win(Pid, updateTag(From, State))};
@@ -87,10 +95,14 @@ scissors({call, {Pid, _}=From}, Choice, State) ->
                 {next_state, no_move, lose(Pid, updateTag(From, State))};
             scissors ->
                 {next_state, no_move, tie(updateTag(From, State))};
+            stopping ->
+                {next_state, stopping, State};
             _ ->
                 {next_state, no_move, lose(Pid, updateTag(From, State))}
         end.
 
+stopping({_, {Pid, _}}, _, _) -> 
+        gen_statem:reply(Pid, server_stopping).
 
 updateTag({Pid, _}=From, {Refs, Rounds, PlayerInfo}) ->
     case maps:find(Pid, PlayerInfo) of 

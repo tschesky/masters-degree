@@ -20,8 +20,8 @@ init(_) -> {ok, {#{}, #{}, 0, running}}.
 % Note - PidA that we get passed to the callback function is actually of form {Pid,Tag}...
 % From gen_server documentation:
 % From is a tuple {Pid,Tag}, where Pid is the pid of the client and Tag is a unique tag.
-handle_call({q_up, _, _}, _, {_, _, _, draining}=State) ->
-    {reply, server_stopping, State};
+handle_call({q_up, _, _}, _, {_, _, _, draining}) ->
+    {reply, server_stopping};
 handle_call({q_up, Name, Rounds}, PidA, {Queue, Coords, Longest, Status}=State) ->
     case maps:find(Rounds, Queue) of
         {ok, {PidB, Name2}} ->
@@ -61,6 +61,7 @@ handle_cast({drain, Pid, Msg}, {Queue, Coords, Longest, _}) ->
 
 handle_cast(drain_complete, State) ->
     unregister(rps),
+    gen_server:stop(self()),
     {stop, normal, State};
 
 handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest, Status})
@@ -71,8 +72,6 @@ handle_cast({game_over, Coord, CoordRef, GameLength}, {Q, Coords, Longest, Statu
 handle_cast({game_over, Coord, CoordRef, _}, {Q, Coords, Longest, Status}) ->
         NewCoords = removeCoord(Coord, Coords, CoordRef),
         {noreply, {Q, NewCoords, Longest, Status}}.
-
-
 
 handle_info(_, State) ->
     {noreply, State}.
